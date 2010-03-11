@@ -1747,24 +1747,24 @@ module Proofobjects : Proofobject_primitives = struct
     );;
 
 
-  let rec print_type = function
-    | Ntvar i -> "T_"^(string_of_int i)
-    | Nbool -> "o"
+  let rec print_type out = function
+    | Ntvar i -> out "T_"; out (string_of_int i)
+    | Nbool -> out "o"
     | Nnum -> failwith "error print_type (Nnum)"
-    | Narrow (a,b) -> "(arrow "^(print_type a)^" "^(print_type b)^")"
+    | Narrow (a,b) -> out "(arrow "; print_type out a; out " "; print_type out b; out ")"
     | Ntdef (i,l) -> failwith "error print_type (Ntdef)";;
 
 
-  let print_cst = function
-    | Heq ty -> "(Eq "^(print_type ty)^")"
+  let print_cst (out:string -> unit) = function
+    | Heq ty -> out "(Eq "; print_type out ty; out ")"
     (* | Heps of ntype *)
     (* | Hand *)
     (* | Hor *)
     (* | Hnot *)
-    | Himp -> "Imp"
+    | Himp -> out "Imp"
     (* | Htrue *)
     (* | Hfalse *)
-    | Hforall ty -> "(Forall "^(print_type ty)^")"
+    | Hforall ty -> out "(Forall "; print_type out ty; out ")"
     (* | Hexists of ntype;; *)
     | _ -> failwith "error print_cst";;
 
@@ -1796,27 +1796,26 @@ module Proofobjects : Proofobject_primitives = struct
            | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
     | Nabs (ty, t) -> Narrow (ty, type_of ldbr t)
 
-  let rec print_term ldbr = function
-    | Ndbr i -> fst (List.nth ldbr i)
-    | Nvar (i, ty) -> "x"^(string_of_int i)
-    | Ncst n -> print_cst n
+  let rec print_term out ldbr = function
+    | Ndbr i -> out (fst (List.nth ldbr i))
+    | Nvar (i, ty) -> out "x"; out (string_of_int i)
+    | Ncst n -> print_cst out n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
     | Napp (t1,t2) ->
         (match type_of ldbr t1 with
            | Narrow (ty1, ty2) ->
-               "(App "^(print_type ty1)^" "^(print_type ty2)^" "^(print_term ldbr t1)^" "^(print_term ldbr t2)^")"
+               out "(App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
            | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-        "(Lam "^(print_type ty)^" "^(print_type (type_of ldbr t))^" ("^n^": hterm "^(print_type ty)^" => "^(print_term ((n,ty)::ldbr) t)^"))";;
-
-
+					out "(Lam "; print_type out ty; out " "; print_type out (type_of ldbr t); out " ("; out n; 
+					out ": hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
 
   let export_thm out (name, p, concl) =
     match concl with
       | None -> failwith "The conclusion of a theorem should not be None."
       | Some cl ->
-          out "\n\n"; out name; out " : eps "; out (print_term [] (term2nterm cl)); out "."
+          out "\n\n"; out name; out " : eps "; print_term out [] (term2nterm cl); out "."
 
 
   (* Main function: list of proofs exportation *)
