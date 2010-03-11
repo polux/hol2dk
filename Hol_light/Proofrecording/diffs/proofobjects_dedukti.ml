@@ -1793,7 +1793,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Napp (t1, _) ->
         (match type_of ldbr t1 with
            | Narrow (_, ty) -> ty
-           | _ -> failwith "Error type_if: the type of the first term of an application should be an arrow type")
+           | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
     | Nabs (ty, t) -> Narrow (ty, type_of ldbr t)
 
   let rec print_term ldbr = function
@@ -1801,10 +1801,14 @@ module Proofobjects : Proofobject_primitives = struct
     | Nvar (i, ty) -> "x"^(string_of_int i)
     | Ncst n -> print_cst n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
-    | Napp (t1,t2) -> "(App "^(print_term ldbr t1)^" "^(print_term ldbr t2)^")"
+    | Napp (t1,t2) ->
+        (match type_of ldbr t1 with
+           | Narrow (ty1, ty2) ->
+               "(App "^(print_type ty1)^" "^(print_type ty2)^" "^(print_term ldbr t1)^" "^(print_term ldbr t2)^")"
+           | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-        "(Lam ("^n^": eps "^(print_type ty)^" => "^(print_term ((n,ty)::ldbr) t)^"))";;
+        "(Lam "^(print_type ty)^" "^(print_type (type_of ldbr t))^" ("^n^": hterm "^(print_type ty)^" => "^(print_term ((n,ty)::ldbr) t)^"))";;
 
 
 
