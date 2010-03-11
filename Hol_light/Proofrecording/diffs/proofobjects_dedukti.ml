@@ -565,6 +565,10 @@ module Proofobjects : Proofobject_primitives = struct
     | [] -> out snil
     | t::q -> out "("; out scons; out " "; str t; out " "; print_list out str snil scons q; out ")";;
 
+  let rec print_list_string str snil scons = function
+    | [] -> snil
+    | t::q -> "("^scons^" "^(str t)^" "^(print_list_string str snil scons q)^")";;
+
 
   let print_names out x = out (string_of_int x); out "%positive";;
 
@@ -1786,37 +1790,93 @@ module Proofobjects : Proofobject_primitives = struct
     | _ -> failwith "error type_cst";;
 
   let rec type_of ldbr = function
-    | Ndbr i -> snd (List.nth ldbr i)
-    | Nvar (_, ty) -> ty
-    | Ncst n -> type_cst n
+    | Ndbr i ->
+        print_string "Ndbr\n";
+        (try
+           snd (List.nth ldbr i)
+         with | Failure _ -> failwith ("type_of: Failure nth with i = "^(string_of_int i)^" and ldbr = "^(print_list_string (fun (x,ty) -> "("^x^", "^(print_type ty)^")") "nil" "::" ldbr)))
+    | Nvar (_, ty) ->
+        print_string "Nvar\n";
+        ty
+    | Ncst n ->
+        print_string "Ncst\n";
+        type_cst n
     | Ndef _ -> failwith "Error type_of: no Ndef for the moment"
     | Napp (t1, _) ->
+        print_string "Napp\n";
         (match type_of ldbr t1 with
            | Narrow (_, ty) -> ty
            | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
-    | Nabs (ty, t) -> Narrow (ty, type_of ldbr t)
+    | Nabs (ty, t) ->
+        print_string "Nabs\n";
+        Narrow (ty, type_of (("",ty)::ldbr) t)
+
 
   let rec print_term ldbr = function
-    | Ndbr i -> fst (List.nth ldbr i)
+    | Ndbr i ->
+        (try
+           fst (List.nth ldbr i)
+         with | Failure _ -> failwith ("print_term: Failure nth with i = "^(string_of_int i)^" and ldbr = "^(print_list_string (fun (x,ty) -> "("^x^", "^(print_type ty)^")") "nil" "::" ldbr)))
     | Nvar (i, ty) -> "x"^(string_of_int i)
     | Ncst n -> print_cst n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
     | Napp (t1,t2) ->
-        (match type_of ldbr t1 with
+        (print_string "type_of de print_term pour Napp\n";
+         match type_of ldbr t1 with
            | Narrow (ty1, ty2) ->
                "(App "^(print_type ty1)^" "^(print_type ty2)^" "^(print_term ldbr t1)^" "^(print_term ldbr t2)^")"
            | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-        "(Lam "^(print_type ty)^" "^(print_type (type_of ldbr t))^" ("^n^": hterm "^(print_type ty)^" => "^(print_term ((n,ty)::ldbr) t)^"))";;
+        print_string "type_of de print_term pour Nabs";
+        "(Lam "^(print_type ty)^" "^(print_type (type_of ((n,ty)::ldbr) t))^" ("^n^": hterm "^(print_type ty)^" => "^(print_term ((n,ty)::ldbr) t)^"))";;
 
+  let print_term = print_term [];;
+
+
+  let rec print_proof out = function
+    | Proof (_, pc, _) -> print_proof_content out pc
+
+  and print_proof_content out = function
+    | Prefl t ->
+        let t2 = term2nterm t in
+        out "(refl "; out (print_type (type_of [] t2)); out " "; out (print_term t2); out ")";
+    | _ -> failwith "print_proof_content: rule not implemented yet"
+    (* | Pbeta of string * hol_type * term *)
+    (* | Pinstt of proof * (string * hol_type) list *)
+    (* | Pabs of proof * string * hol_type *)
+    (* | Pdisch of proof * term *)
+    (* | Phyp of term *)
+    (* | Pspec of proof * term *)
+    (* | Pinst of proof * (string * hol_type * term) list *)
+    (* | Pgen of proof * string * hol_type *)
+    (* | Psym of proof *)
+    (* | Ptrans of proof * proof *)
+    (* | Pcomb of proof * proof *)
+    (* | Peqmp of proof * proof *)
+    (* | Pexists of proof * term * term *)
+    (* | Pchoose of string * hol_type * proof * proof *)
+    (* | Pconj of proof * proof *)
+    (* | Pconjunct1 of proof *)
+    (* | Pconjunct2 of proof *)
+    (* | Pdisj1 of proof * term *)
+    (* | Pdisj2 of proof * term *)
+    (* | Pdisjcases of proof * proof * proof *)
+    (* | Pnoti of proof *)
+    (* | Pnote of proof *)
+    (* | Pcontr of proof * term *)
+    (* | Pimpas of proof * proof *)
+    (* | Paxm of string * term *)
+    (* | Pdef of string * hol_type * term *)
+    (* | Ptyintro of hol_type * string * hol_type list * string * string * term;; *)
 
 
   let export_thm out (name, p, concl) =
     match concl with
       | None -> failwith "The conclusion of a theorem should not be None."
       | Some cl ->
-          out "\n\n"; out name; out " : eps "; out (print_term [] (term2nterm cl)); out "."
+          out "\n\n"; out name; out " : eps "; out (print_term (term2nterm cl)); out ".\n";
+          out "[] "; out name; out " --> "; print_string "toto\n"; print_proof out p; print_string "tutu\n"; out ".";;
 
 
   (* Main function: list of proofs exportation *)
