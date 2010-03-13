@@ -1754,12 +1754,12 @@ module Proofobjects : Proofobject_primitives = struct
   let rec print_type out = function
     | Ntvar i -> out "T_"; out (string_of_int i)
     | Nbool -> out "o"
-    | Nnum -> failwith "error print_type (Nnum)"
+    | Nnum -> failwith "print_type: Nnum not a special type"
     | Narrow (a,b) -> out "(arrow "; print_type out a; out " "; print_type out b; out ")"
-    | Ntdef (i,l) -> failwith "error print_type (Ntdef)";;
+    | Ntdef (i,l) -> failwith "print_type: Ntdef not implemented yet";;
 
 
-  let print_cst (out:string -> unit) = function
+  let print_cst out = function
     | Heq ty -> out "(Eq "; print_type out ty; out ")"
     (* | Heps of ntype *)
     (* | Hand *)
@@ -1792,19 +1792,15 @@ module Proofobjects : Proofobject_primitives = struct
   let rec type_of ldbr = function
     | Ndbr i -> snd (List.nth ldbr i)
     | Nvar (_, ty) ->
-        print_string "Nvar\n";
         ty
     | Ncst n ->
-        print_string "Ncst\n";
         type_cst n
     | Ndef _ -> failwith "Error type_of: no Ndef for the moment"
     | Napp (t1, _) ->
-        print_string "Napp\n";
         (match type_of ldbr t1 with
            | Narrow (_, ty) -> ty
            | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
     | Nabs (ty, t) ->
-        print_string "Nabs\n";
         Narrow (ty, type_of (("",ty)::ldbr) t)
 
   let rec print_term out ldbr = function
@@ -1813,15 +1809,14 @@ module Proofobjects : Proofobject_primitives = struct
     | Ncst n -> print_cst out n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
     | Napp (t1,t2) ->
-        (print_string "type_of de print_term pour Napp\n";
-         match type_of ldbr t1 with
+        (match type_of ldbr t1 with
            | Narrow (ty1, ty2) ->
                out "(App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
            | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-					out "(Lam "; print_type out ty; out " "; print_type out (type_of ldbr t); out " ("; out n; 
-					out ": hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
+	out "(Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n; 
+	out ": hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
 
   let print_term out = print_term out [];;
 
@@ -1866,7 +1861,7 @@ module Proofobjects : Proofobject_primitives = struct
       | None -> failwith "The conclusion of a theorem should not be None."
       | Some cl ->
           out "\n\n"; out name; out " : eps "; print_term out (term2nterm cl); out ".\n";
-          out "[] "; out name; out " --> "; print_string "toto\n"; print_proof out p; print_string "tutu\n"; out ".";;
+          out "[] "; out name; out " --> "; print_proof out p; out ".";;
 
   (* Main function: list of proofs exportation *)
 
