@@ -1750,25 +1750,24 @@ module Proofobjects : Proofobject_primitives = struct
       )
     );;
 
-
   let rec print_type out = function
     | Ntvar i -> out "T_"; out (string_of_int i)
-    | Nbool -> out "o"
-    | Nnum -> failwith "error print_type (Nnum)"
-    | Narrow (a,b) -> out "(arrow "; print_type out a; out " "; print_type out b; out ")"
-    | Ntdef (i,l) -> failwith "error print_type (Ntdef)";;
+    | Nbool -> out "hol.o"
+    | Nnum -> failwith "print_type: Nnum not a special type"
+    | Narrow (a,b) -> out "(hol.arrow "; print_type out a; out " "; print_type out b; out ")"
+    | Ntdef (i,l) -> failwith "print_type: Ntdef not implemented yet";;
 
 
-  let print_cst (out:string -> unit) = function
-    | Heq ty -> out "(Eq "; print_type out ty; out ")"
+  let print_cst out = function
+    | Heq ty -> out "(hol.Eq "; print_type out ty; out ")"
     (* | Heps of ntype *)
     (* | Hand *)
     (* | Hor *)
     (* | Hnot *)
-    | Himp -> out "Imp"
+    | Himp -> out "hol.Imp"
     (* | Htrue *)
     (* | Hfalse *)
-    | Hforall ty -> out "(Forall "; print_type out ty; out ")"
+    | Hforall ty -> out "(hol.Forall "; print_type out ty; out ")"
     (* | Hexists of ntype;; *)
     | _ -> failwith "error print_cst";;
 
@@ -1792,19 +1791,15 @@ module Proofobjects : Proofobject_primitives = struct
   let rec type_of ldbr = function
     | Ndbr i -> snd (List.nth ldbr i)
     | Nvar (_, ty) ->
-        print_string "Nvar\n";
         ty
     | Ncst n ->
-        print_string "Ncst\n";
         type_cst n
     | Ndef _ -> failwith "Error type_of: no Ndef for the moment"
     | Napp (t1, _) ->
-        print_string "Napp\n";
         (match type_of ldbr t1 with
            | Narrow (_, ty) -> ty
            | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
     | Nabs (ty, t) ->
-        print_string "Nabs\n";
         Narrow (ty, type_of (("",ty)::ldbr) t)
 
   let rec print_term out ldbr = function
@@ -1813,15 +1808,14 @@ module Proofobjects : Proofobject_primitives = struct
     | Ncst n -> print_cst out n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
     | Napp (t1,t2) ->
-        (print_string "type_of de print_term pour Napp\n";
-         match type_of ldbr t1 with
+        (match type_of ldbr t1 with
            | Narrow (ty1, ty2) ->
-               out "(App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
+               out "(hol.App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
            | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-					out "(Lam "; print_type out ty; out " "; print_type out (type_of ldbr t); out " ("; out n; 
-					out ": hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
+	out "(hol.Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n; 
+	out ": hol.hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
 
   let print_term out = print_term out [];;
 
@@ -1831,7 +1825,7 @@ module Proofobjects : Proofobject_primitives = struct
   and print_proof_content out = function
     | Prefl t ->
         let t2 = term2nterm t in
-        out "(refl "; print_type out (type_of [] t2); out " "; print_term out t2; out ")";
+        out "(hol.refl "; print_type out (type_of [] t2); out " "; print_term out t2; out ")";
     | _ -> failwith "print_proof_content: rule not implemented yet"
     (* | Pbeta of string * hol_type * term *)
     (* | Pinstt of proof * (string * hol_type) list *)
@@ -1865,8 +1859,8 @@ module Proofobjects : Proofobject_primitives = struct
     match concl with
       | None -> failwith "The conclusion of a theorem should not be None."
       | Some cl ->
-          out "\n\n"; out name; out " : eps "; print_term out (term2nterm cl); out ".\n";
-          out "[] "; out name; out " --> "; print_string "toto\n"; print_proof out p; print_string "tutu\n"; out ".";;
+          out "\n\n"; out name; out " : hol.eps "; print_term out (term2nterm cl); out ".\n";
+          out "[] "; out name; out " --> "; print_proof out p; out ".";;
 
   (* Main function: list of proofs exportation *)
 
