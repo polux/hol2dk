@@ -1831,33 +1831,34 @@ module Proofobjects : Proofobject_primitives = struct
     (* | Pbeta of string * hol_type * term *)
     (* | Pinstt of proof * (string * hol_type) list *)
     (* | Pabs of proof * string * hol_type *)
-    | Pdisch (Proof (_,pc,_),t) ->
+    | Pdisch (p,t) ->
 	let n = new_name () in
 	let t' = term2nterm t in
-	out n; out ":"; print_term out t'; out " => "; print_proof_content out ((t,n)::hyps) pc
+	out n; out ":"; print_term out t'; out " => "; print_proof_content out ((t,n)::hyps) (content_of p)
     | Phyp t -> out (List.assoc t hyps)
-    (* | Pspec of proof * term *)
-    (* | Pinst of proof * (string * hol_type * term) list *)
-    (* | Pgen of proof * string * hol_type *)
-    (* | Psym of proof *)
-    (* | Ptrans of proof * proof *)
-    (* | Pcomb of proof * proof *)
-    (* | Peqmp of proof * proof *)
-    (* | Pexists of proof * term * term *)
-    (* | Pchoose of string * hol_type * proof * proof *)
-    (* | Pconj of proof * proof *)
-    (* | Pconjunct1 of proof *)
-    (* | Pconjunct2 of proof *)
-    (* | Pdisj1 of proof * term *)
-    (* | Pdisj2 of proof * term *)
-    (* | Pdisjcases of proof * proof * proof *)
-    (* | Pnoti of proof *)
-    (* | Pnote of proof *)
-    (* | Pcontr of proof * term *)
-    (* | Pimpas of proof * proof *)
-    (* | Paxm of string * term *)
-    (* | Pdef of string * hol_type * term *)
-    (* | Ptyintro of hol_type * string * hol_type list * string * string * term;; *)
+    | Pspec (p,t)   -> failwith "print_proof_content: PSpec rule not implemented yet"
+    | Pinst (p,l)   -> failwith "print_proof_content: Pinst rule not implemented yet"
+    | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
+    | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
+    | Ptrans (p1,p2) -> failwith "print_proof_content: Ptrans rule not implemented yet"
+    | Pcomb (p1,p2) -> out "(hol.comb "; (* TODO : types explicites, p1= (App (App eq t11) t12) et p2 = ... *) 
+		       print_proof_content out hyps (content_of p1); out " "; print_proof_content out hyps (content_of p2); out ")"
+    | Peqmp (p1,p2) -> out "("; print_proof_content out hyps (content_of p1); out " "; print_proof_content out hyps (content_of p2); out ")"
+    | Pexists (p,t1,t2) -> failwith "print_proof_content: Pexists rule not implemented yet"
+    | Pchoose(x,ht,p1,p2) -> failwith "print_proof_content: Pchoose rule not implemented yet"
+    | Pconj(p1,p2) -> failwith "print_proof_content: Pconj rule not implemented yet"
+    | Pconjunct1(p) -> failwith "print_proof_content: Pconjunct1 rule not implemented yet"
+    | Pconjunct2(p) -> failwith "print_proof_content: Pconjunct2 rule not implemented yet"
+    | Pdisj1 (p,t) -> failwith "print_proof_content: Pdisj1 rule not implemented yet"
+    | Pdisj2 (p,t) -> failwith "print_proof_content: Pdisj2 rule not implemented yet"
+    | Pdisjcases(p1,p2,p3) -> failwith "print_proof_content: Pdisjcases rule not implemented yet"
+    | Pnoti p -> failwith "print_proof_content: Pnoti rule not implemented yet"
+    | Pnote p -> failwith "print_proof_content: Pnote rule not implemented yet"
+    | Pcontr (p,t) -> failwith "print_proof_content: Pcontr rule not implemented yet"
+    | Pimpas (p1,p2) -> failwith "print_proof_content: Pimpas rule not implemented yet"
+    | Paxm (x,t) -> failwith "print_proof_content: Paxm rule not implemented yet"
+    | Pdef (s,ht,t) -> failwith "print_proof_content: Pdef rule not implemented yet"
+    | Ptyintro (ht,x,l,y,z,t) -> failwith "print_proof_content: Ptyintro rule not implemented yet"
     | _ -> failwith "print_proof_content: rule not implemented yet"
 
   let export_thm out (name, p, concl) =
