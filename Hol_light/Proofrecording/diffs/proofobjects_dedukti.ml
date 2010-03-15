@@ -1820,18 +1820,22 @@ module Proofobjects : Proofobject_primitives = struct
   let print_term out = print_term out [];;
 
   let rec print_proof out = function
-    | Proof (_, pc, _) -> print_proof_content out pc
+    | Proof (_, pc, _) -> print_proof_content out [] pc
 
-  and print_proof_content out = function
+  (* hyps is of the form [(p1,x1),...,(pn,xn)]
+     where pi are propositions and xi variable names *)
+  and print_proof_content out hyps = function
     | Prefl t ->
         let t2 = term2nterm t in
-        out "(hol.refl "; print_type out (type_of [] t2); out " "; print_term out t2; out ")";
-    | _ -> failwith "print_proof_content: rule not implemented yet"
+        out "(hol.refl "; print_type out (type_of [] t2); out " "; print_term out t2; out ")"
     (* | Pbeta of string * hol_type * term *)
     (* | Pinstt of proof * (string * hol_type) list *)
     (* | Pabs of proof * string * hol_type *)
-    (* | Pdisch of proof * term *)
-    (* | Phyp of term *)
+    | Pdisch (Proof (_,pc,_),t) ->
+	let n = new_name () in
+	let t' = term2nterm t in
+	out n; out ":"; print_term out t'; out " => "; print_proof_content out ((t,n)::hyps) pc
+    | Phyp t -> out (List.assoc t hyps)
     (* | Pspec of proof * term *)
     (* | Pinst of proof * (string * hol_type * term) list *)
     (* | Pgen of proof * string * hol_type *)
@@ -1854,6 +1858,7 @@ module Proofobjects : Proofobject_primitives = struct
     (* | Paxm of string * term *)
     (* | Pdef of string * hol_type * term *)
     (* | Ptyintro of hol_type * string * hol_type list * string * string * term;; *)
+    | _ -> failwith "print_proof_content: rule not implemented yet"
 
   let export_thm out (name, p, concl) =
     match concl with
