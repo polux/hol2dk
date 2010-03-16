@@ -1905,6 +1905,38 @@ module Proofobjects : Proofobject_primitives = struct
   (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a context *)
   let apply_subst_to_hyps l s = map (fun (p,x) -> (apply_subst l p,x)) s
 
+  let rec conclusion_of p = function
+    | Proof (_, pc, _) -> conclusion_of_content pc
+  and conclusion_of_content = function
+    | Prefl t -> mk_const("TODO",[])
+    | Pbeta (x,ht,t) -> mk_const("TODO",[])
+    | Pinstt (p,l) -> mk_const("TODO",[])
+    | Pabs (p,x,ht) -> mk_const("TODO",[])
+    | Pdisch (p,t) -> mk_const("TODO",[])
+    | Phyp t -> mk_const("TODO",[])
+    | Pspec (p,t)   -> mk_const("TODO",[])
+    | Pinst (p,l)   -> mk_const("TODO",[])
+    | Pgen (p,x,ht) -> mk_const("TODO",[])
+    | Psym p        -> mk_const("TODO",[])
+    | Ptrans (p1,p2) -> mk_const("TODO",[])
+    | Pcomb (p1,p2) -> mk_const("TODO",[])
+    | Peqmp (p1,p2) -> mk_const("TODO",[])
+    | Pexists (p,t1,t2) -> mk_const("TODO",[])
+    | Pchoose(x,ht,p1,p2) -> mk_const("TODO",[])
+    | Pconj(p1,p2) -> mk_const("TODO",[])
+    | Pconjunct1(p) -> mk_const("TODO",[])
+    | Pconjunct2(p) -> mk_const("TODO",[])
+    | Pdisj1 (p,t) -> mk_const("TODO",[])
+    | Pdisj2 (p,t) -> mk_const("TODO",[])
+    | Pdisjcases(p1,p2,p3) -> mk_const("TODO",[])
+    | Pnoti p -> mk_const("TODO",[])
+    | Pnote p -> mk_const("TODO",[])
+    | Pcontr (p,t) -> mk_const("TODO",[])
+    | Pimpas (p1,p2) -> mk_const("TODO",[])
+    | Paxm (x,t) -> mk_const("TODO",[])
+    | Pdef (s,ht,t) -> mk_const("TODO",[])
+    | Ptyintro (ht,x,l,y,z,t) -> mk_const("TODO",[])
+
   let rec print_proof out = function
     | Proof (_, pc, _) -> print_proof_content out [] pc
 
@@ -1920,7 +1952,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Pbeta (x,ht,t) -> 
 	let t' = term2nterm t in
         let ht' = hol_type2ntype ht in
-        let tty = type_of [(x,ht')] (term2nterm t) in
+        let tty = type_of [(x,ht')] t' in
 	  out "(hol.beta ";
 	  print_type out ht'; out " ";
 	  print_type out tty; out " ";
