@@ -1761,32 +1761,34 @@ module Proofobjects : Proofobject_primitives = struct
   let print_cst out = function
     | Heq ty -> out "(hol.Eq "; print_type out ty; out ")"
     (* | Heps of ntype *)
-    (* | Hand *)
-    (* | Hor *)
-    (* | Hnot *)
+    | Hand -> out "hol.And"
+    | Hor  -> out "hol.Or"
+    | Hnot -> out "hol.Not"
     | Himp -> out "hol.Imp"
-    (* | Htrue *)
-    (* | Hfalse *)
+    | Htrue -> out "hol.True"
+    | Hfalse -> out "hol.False"
     | Hforall ty -> out "(hol.Forall "; print_type out ty; out ")"
-    (* | Hexists of ntype;; *)
+    | Hexists ty -> out "(hol.Exists "; print_type out ty; out ")"
     | _ -> failwith "error print_cst";;
 
-
-  let term_names = ref (-1);;
-  let new_name () = incr term_names; "y"^(string_of_int !term_names);;
+  let new_name = 
+    let term_names = ref (-1)
+    in function () -> 
+      incr term_names;
+      "y"^(string_of_int !term_names)
 
   let type_cst = function
     | Heq ty -> Narrow (ty, Narrow (ty, Nbool))
     (* | Heps of ntype *)
-    (* | Hand *)
-    (* | Hor *)
-    (* | Hnot *)
+    | Hand -> Narrow (Nbool, Narrow (Nbool, Nbool))
+    | Hor  -> Narrow (Nbool, Narrow (Nbool, Nbool))
+    | Hnot -> Narrow (Nbool, Nbool)
     | Himp -> Narrow (Nbool, Narrow (Nbool, Nbool))
-    (* | Htrue *)
-    (* | Hfalse *)
+    | Htrue -> Nbool
+    | Hfalse -> Nbool
     | Hforall ty -> Narrow (Narrow (ty, Nbool), Nbool)
-    (* | Hexists of ntype;; *)
-    | _ -> failwith "error type_cst";;
+    | Hexists ty -> Narrow (Narrow (ty, Nbool), Nbool)
+    | _ -> failwith "error type_cst"
 
   let rec type_of ldbr = function
     | Ndbr i -> snd (List.nth ldbr i)
@@ -1819,6 +1821,58 @@ module Proofobjects : Proofobject_primitives = struct
 
   let print_term out = print_term out [];;
 
+  let dump_table l = 
+    let dump (t,x) =
+      print_term print_string t;
+      print_string " : ";
+      print_string x
+    in List.iter (fun c -> dump c; print_newline ()) l;;
+
+  let dump_subst l =
+    let dump (x,ht,t) =
+      print_string x;
+      print_string ":";
+      print_type print_string (hol_type2ntype ht);
+      print_string " -> ";
+      print_term print_string (term2nterm t);
+    in List.iter (fun c -> dump c; print_newline ()) l;;
+
+
+  let apply_subst s = 
+    vsubst (map (fun (x,ty,t) -> (mk_var (x,ty),t)) s)
+
+  let rec apply_subst_to_proof s = function
+    | Proof (i,p,f) -> Proof(i,apply_subst_to_proof_content s p,f)
+  and apply_subst_to_proof_content s = function 
+    | Prefl t -> Prefl (apply_subst s t)
+    | Pbeta (x,ht,t) -> Pbeta (x,ht,apply_subst s t)
+    | Pinstt (p,l) -> Pinstt (apply_subst_to_proof s p, l)
+    | Pabs (p,x,ht) -> Pabs (apply_subst_to_proof s p, x, ht)
+    | Pdisch (p,t) -> Pdisch (apply_subst_to_proof s p, apply_subst s t)
+    | Phyp t -> Phyp (apply_subst s t)
+    | Pspec (p,t) -> Pspec (apply_subst_to_proof s p, apply_subst s t)
+    | Pinst (p,l) -> Pinst (apply_subst_to_proof s p, map (fun (x,ht,t) -> (x,ht,apply_subst s t)) l)
+    | Pgen (p,x,ht) -> Pgen (apply_subst_to_proof s p,x,ht)
+    | Psym p -> Psym (apply_subst_to_proof s p)
+    | Ptrans (p1,p2) -> Ptrans (apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Pcomb  (p1,p2) -> Pcomb (apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Peqmp (p1,p2) -> Peqmp (apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Pexists (p,t1,t2) -> Pexists (apply_subst_to_proof s p, apply_subst s t1, apply_subst s t2)
+    | Pchoose (x,ht,p1,p2) -> Pchoose (x,ht,apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Pconj (p1,p2) -> Pconj (apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Pconjunct1 p -> Pconjunct1 (apply_subst_to_proof s p)
+    | Pconjunct2 p -> Pconjunct2 (apply_subst_to_proof s p)
+    | Pdisj1 (p,t) -> Pdisj1 (apply_subst_to_proof s p, apply_subst s t)
+    | Pdisj2 (p,t) -> Pdisj2 (apply_subst_to_proof s p, apply_subst s t)
+    | Pdisjcases (p1,p2,p3) -> Pdisjcases (apply_subst_to_proof s p1, apply_subst_to_proof s p2, apply_subst_to_proof s p3)
+    | Pnoti p -> Pnoti (apply_subst_to_proof s p)
+    | Pnote p -> Pnote (apply_subst_to_proof s p)
+    | Pcontr (p,t) -> Pcontr (apply_subst_to_proof s p, apply_subst s t)
+    | Pimpas (p1,p2) -> Pimpas (apply_subst_to_proof s p1, apply_subst_to_proof s p2)
+    | Paxm (x,t) -> Paxm (x,apply_subst s t)
+    | Pdef (x,ht,t) -> Pdef (x,ht, apply_subst s t)
+    | Ptyintro (ht,x,l,y,z,t) -> Ptyintro (ht,x,l,y,z,apply_subst s t)
+
   let rec print_proof out = function
     | Proof (_, pc, _) -> print_proof_content out [] pc
 
@@ -1827,23 +1881,66 @@ module Proofobjects : Proofobject_primitives = struct
   and print_proof_content out hyps = function
     | Prefl t ->
         let t2 = term2nterm t in
-        out "(hol.refl "; print_type out (type_of [] t2); out " "; print_term out t2; out ")"
-    (* | Pbeta of string * hol_type * term *)
-    (* | Pinstt of proof * (string * hol_type) list *)
-    (* | Pabs of proof * string * hol_type *)
+          out "(hol.refl "; 
+          print_type out (type_of [] t2); out " ";
+          print_term out t2; 
+          out ")"
+    | Pbeta (x,ht,t) -> 
+	let t' = term2nterm t in
+	  out "(hol.beta ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+          print_term out t'; out " ";
+          out x; out ")";
+    | Pinstt (p,l) -> failwith "print_proof_content: Pinstt rule not implemented yet"
+    | Pabs (p,x,ht) -> 
+	out "(hol.abs ";
+	out "_"; out " ";
+	out "_"; out " ";
+	out "_"; out " ";
+	out "_"; out " ";
+        print_proof_content out hyps (content_of p)	
     | Pdisch (p,t) ->
 	let n = new_name () in
 	let t' = term2nterm t in
-	out n; out ":"; print_term out t'; out " => "; print_proof_content out ((t,n)::hyps) (content_of p)
-    | Phyp t -> out (List.assoc t hyps)
+	  out n; out ":"; print_term out t'; 
+          out " => "; 
+          print_proof_content out ((t',n)::hyps) (content_of p)
+    | Phyp t -> dump_table hyps; print_newline; print_term print_string (term2nterm t); print_newline; out (List.assoc (term2nterm t) hyps);
     | Pspec (p,t)   -> failwith "print_proof_content: PSpec rule not implemented yet"
-    | Pinst (p,l)   -> failwith "print_proof_content: Pinst rule not implemented yet"
+    | Pinst (p,l)   ->
+	print_string "Pinst:\n";
+	dump_subst l;
+	(* FAUX : il faut réellement appliquer l à p ici *)
+	print_proof_content out hyps (content_of p)
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
     | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
-    | Ptrans (p1,p2) -> failwith "print_proof_content: Ptrans rule not implemented yet"
-    | Pcomb (p1,p2) -> out "(hol.comb "; (* TODO : types explicites, p1= (App (App eq t11) t12) et p2 = ... *) 
-		       print_proof_content out hyps (content_of p1); out " "; print_proof_content out hyps (content_of p2); out ")"
-    | Peqmp (p1,p2) -> out "("; print_proof_content out hyps (content_of p1); out " "; print_proof_content out hyps (content_of p2); out ")"
+    | Ptrans (p1,p2) -> 
+	out "(hol.trans ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+	print_proof_content out hyps (content_of p1); out " "; 
+        print_proof_content out hyps (content_of p2); out ")"
+    | Pcomb (p1,p2) ->
+        (* let .... *)     	
+	out "(hol.mk_comb ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+        out "_"; out " ";
+	print_proof_content out hyps (content_of p1); out " "; 
+        print_proof_content out hyps (content_of p2); out ")"
+    | Peqmp (p1,p2) -> 
+	out "("; 
+	print_proof_content out hyps (content_of p1); out " "; 
+	print_proof_content out hyps (content_of p2); 
+	out ")"
     | Pexists (p,t1,t2) -> failwith "print_proof_content: Pexists rule not implemented yet"
     | Pchoose(x,ht,p1,p2) -> failwith "print_proof_content: Pchoose rule not implemented yet"
     | Pconj(p1,p2) -> failwith "print_proof_content: Pconj rule not implemented yet"
@@ -1855,9 +1952,18 @@ module Proofobjects : Proofobject_primitives = struct
     | Pnoti p -> failwith "print_proof_content: Pnoti rule not implemented yet"
     | Pnote p -> failwith "print_proof_content: Pnote rule not implemented yet"
     | Pcontr (p,t) -> failwith "print_proof_content: Pcontr rule not implemented yet"
-    | Pimpas (p1,p2) -> failwith "print_proof_content: Pimpas rule not implemented yet"
+    | Pimpas (p1,p2) ->
+	out "(hol.impas ";
+	print_proof_content out hyps (content_of p1); out " ";
+	print_proof_content out hyps (content_of p2); 
+	out ")"
     | Paxm (x,t) -> failwith "print_proof_content: Paxm rule not implemented yet"
-    | Pdef (s,ht,t) -> failwith "print_proof_content: Pdef rule not implemented yet"
+    | Pdef (s,ht,t) -> 
+	let t' = term2nterm t in
+	let ht' = hol_type2ntype ht in
+	out s; out ":"; print_type out ht'; out "."; 
+	out "[]"; out s; out " --> "; print_term out t'; out "."
+	(* failwith "print_proof_content: Pdef rule not implemented yet" *)
     | Ptyintro (ht,x,l,y,z,t) -> failwith "print_proof_content: Ptyintro rule not implemented yet"
     | _ -> failwith "print_proof_content: rule not implemented yet"
 
