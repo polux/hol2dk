@@ -1821,26 +1821,55 @@ module Proofobjects : Proofobject_primitives = struct
 
   let print_term out = print_term out [];;
 
+  (* for debugging only *)
+  let rec dump_term = function
+    | Var(x,ht) -> 
+	print_string x; 
+	print_string ":"; 
+	print_type print_string (hol_type2ntype ht)
+    | Const (s,ht) -> 
+	print_string s; 
+	print_string ":"; 
+	print_type print_string (hol_type2ntype ht)
+    | Comb (t1,t2) -> 
+	print_string "(";
+	dump_term t1;
+	print_string " ";
+	dump_term t2;
+	print_string ")";
+    | Abs (x,t) ->
+	print_string "(\\";
+	dump_term x;
+	print_string ".";
+	dump_term t;
+	print_string ")"
+
+  (* for debugging only *)
   let dump_table l = 
     let dump (t,x) =
-      print_term print_string t;
+      dump_term t;
       print_string " : ";
       print_string x
-    in List.iter (fun c -> dump c; print_newline ()) l;;
+    in print_string "[";
+       List.iter (fun c -> dump c; print_newline ()) l;
+       print_string "]"
 
+  (* for debugging only *)
   let dump_subst l =
     let dump (x,ht,t) =
       print_string x;
       print_string ":";
       print_type print_string (hol_type2ntype ht);
       print_string " -> ";
-      print_term print_string (term2nterm t);
+      dump_term t
     in List.iter (fun c -> dump c; print_newline ()) l;;
 
+  (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a term *)
+  let apply_subst s t = 
+    let theta = map (fun (x,ty,t) -> (t,mk_var (x,ty))) s
+    in vsubst theta t
 
-  let apply_subst s = 
-    vsubst (map (fun (x,ty,t) -> (mk_var (x,ty),t)) s)
-
+  (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a proof *)
   let rec apply_subst_to_proof s = function
     | Proof (i,p,f) -> Proof(i,apply_subst_to_proof_content s p,f)
   and apply_subst_to_proof_content s = function 
@@ -1905,14 +1934,21 @@ module Proofobjects : Proofobject_primitives = struct
 	let t' = term2nterm t in
 	  out n; out ":"; print_term out t'; 
           out " => "; 
-          print_proof_content out ((t',n)::hyps) (content_of p)
-    | Phyp t -> dump_table hyps; print_newline; print_term print_string (term2nterm t); print_newline; out (List.assoc (term2nterm t) hyps);
+          print_proof_content out ((t,n)::hyps) (content_of p)
+    | Phyp t -> 	
+	(* print_string "looking for: "; 
+	dump_term t; 
+	print_newline (); 
+	print_string "in: "; 
+	dump_table hyps; 
+	print_newline (); *)
+	out (List.assoc t hyps);
     | Pspec (p,t)   -> failwith "print_proof_content: PSpec rule not implemented yet"
     | Pinst (p,l)   ->
-	print_string "Pinst:\n";
-	dump_subst l;
-	(* FAUX : il faut réellement appliquer l à p ici *)
-	print_proof_content out hyps (content_of p)
+	(* print_string "Pinst:\n"; dump_subst l; *)
+	(* TODO : apply substitution to hyps as well ? *)
+	let pc = apply_subst_to_proof_content l (content_of p)
+	in print_proof_content out hyps pc
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
     | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
     | Ptrans (p1,p2) -> 
@@ -1958,14 +1994,14 @@ module Proofobjects : Proofobject_primitives = struct
 	print_proof_content out hyps (content_of p2); 
 	out ")"
     | Paxm (x,t) -> failwith "print_proof_content: Paxm rule not implemented yet"
-    | Pdef (s,ht,t) -> 
+    | Pdef (s,ht,t) -> out ""
+        (*
 	let t' = term2nterm t in
 	let ht' = hol_type2ntype ht in
 	out s; out ":"; print_type out ht'; out "."; 
-	out "[]"; out s; out " --> "; print_term out t'; out "."
+	out "[]"; out s; out " --> "; print_term out t'; out "." *)
 	(* failwith "print_proof_content: Pdef rule not implemented yet" *)
     | Ptyintro (ht,x,l,y,z,t) -> failwith "print_proof_content: Ptyintro rule not implemented yet"
-    | _ -> failwith "print_proof_content: rule not implemented yet"
 
   let export_thm out (name, p, concl) =
     match concl with
