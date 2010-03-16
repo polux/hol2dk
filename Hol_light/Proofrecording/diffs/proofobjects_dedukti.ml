@@ -1983,6 +1983,13 @@ module Proofobjects : Proofobject_primitives = struct
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
     | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
     | Ptrans (p1,p2) -> 
+        (* invariant : a = b && t = u *)
+	(*
+	let c1 = conclusion_of p1 in
+        let c2 = conclusion_of p2 in
+	let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in 
+	let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in 
+        *)
 	out "(hol.trans ";
         out "_"; out " ";
         out "_"; out " ";
@@ -1993,7 +2000,13 @@ module Proofobjects : Proofobject_primitives = struct
 	print_proof_content out hyps (content_of p1); out " "; 
         print_proof_content out hyps (content_of p2); out ")"
     | Pcomb (p1,p2) ->
-        (* let .... *)     	
+        (* invariant : a = c *)
+        (*
+	let c1 = conclusion_of p1 in
+        let c2 = conclusion_of p2 in
+	let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in 
+	let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in 
+        *)
 	out "(hol.mk_comb ";
         out "_"; out " ";
         out "_"; out " ";
