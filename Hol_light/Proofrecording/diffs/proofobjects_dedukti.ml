@@ -1919,11 +1919,14 @@ module Proofobjects : Proofobject_primitives = struct
           out ")"
     | Pbeta (x,ht,t) -> 
 	let t' = term2nterm t in
+        let ht' = hol_type2ntype ht in
+        let tty = type_of [(x,ht')] (term2nterm t) in
 	  out "(hol.beta ";
-	  out "_"; out " ";
-	  out "_"; out " ";
+	  print_type out ht'; out " ";
+	  print_type out tty; out " ";
           print_term out t'; out " ";
-          out x; out ")";
+          out x; 
+          out ")";
     | Pinstt (p,l) -> failwith "print_proof_content: Pinstt rule not implemented yet"
     | Pabs (p,x,ht) -> 
 	out "(hol.abs ";
