@@ -1902,6 +1902,9 @@ module Proofobjects : Proofobject_primitives = struct
     | Pdef (x,ht,t) -> Pdef (x,ht, apply_subst s t)
     | Ptyintro (ht,x,l,y,z,t) -> Ptyintro (ht,x,l,y,z,apply_subst s t)
 
+  (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a context *)
+  let apply_subst_to_hyps l s = map (fun (p,x) -> (apply_subst l p,x)) s
+
   let rec print_proof out = function
     | Proof (_, pc, _) -> print_proof_content out [] pc
 
@@ -1928,27 +1931,20 @@ module Proofobjects : Proofobject_primitives = struct
 	out "_"; out " ";
 	out "_"; out " ";
 	out "_"; out " ";
-        print_proof_content out hyps (content_of p)	
+        print_proof_content out hyps (content_of p);
+	out ")"	
     | Pdisch (p,t) ->
 	let n = new_name () in
 	let t' = term2nterm t in
 	  out n; out ":"; print_term out t'; 
           out " => "; 
           print_proof_content out ((t,n)::hyps) (content_of p)
-    | Phyp t -> 	
-	(* print_string "looking for: "; 
-	dump_term t; 
-	print_newline (); 
-	print_string "in: "; 
-	dump_table hyps; 
-	print_newline (); *)
-	out (List.assoc t hyps);
+    | Phyp t -> out (List.assoc t hyps);
     | Pspec (p,t)   -> failwith "print_proof_content: PSpec rule not implemented yet"
     | Pinst (p,l)   ->
-	(* print_string "Pinst:\n"; dump_subst l; *)
-	(* TODO : apply substitution to hyps as well ? *)
-	let pc = apply_subst_to_proof_content l (content_of p)
-	in print_proof_content out hyps pc
+	let pc'   = apply_subst_to_proof_content l (content_of p) in
+        let hyps' = apply_subst_to_hyps l hyps in 
+	  print_proof_content out hyps' pc'
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
     | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
     | Ptrans (p1,p2) -> 
