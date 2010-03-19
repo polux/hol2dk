@@ -1771,9 +1771,9 @@ module Proofobjects : Proofobject_primitives = struct
     | Hexists ty -> out "(hol.Exists "; print_type out ty; out ")"
     | _ -> failwith "error print_cst";;
 
-  let new_name = 
+  let new_name =
     let term_names = ref (-1)
-    in function () -> 
+    in function () ->
       incr term_names;
       "y"^(string_of_int !term_names)
 
@@ -1816,22 +1816,22 @@ module Proofobjects : Proofobject_primitives = struct
            | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
     | Nabs (ty,t) ->
         let n = new_name () in
-	out "(hol.Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n; 
+	out "(hol.Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n;
 	out ": hol.hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
 
   let print_term out = print_term out [];;
 
   (* for debugging only *)
   let rec dump_term = function
-    | Var(x,ht) -> 
-	print_string x; 
-	print_string ":"; 
+    | Var(x,ht) ->
+	print_string x;
+	print_string ":";
 	print_type print_string (hol_type2ntype ht)
-    | Const (s,ht) -> 
-	print_string s; 
-	print_string ":"; 
+    | Const (s,ht) ->
+	print_string s;
+	print_string ":";
 	print_type print_string (hol_type2ntype ht)
-    | Comb (t1,t2) -> 
+    | Comb (t1,t2) ->
 	print_string "(";
 	dump_term t1;
 	print_string " ";
@@ -1845,7 +1845,7 @@ module Proofobjects : Proofobject_primitives = struct
 	print_string ")"
 
   (* for debugging only *)
-  let dump_table l = 
+  let dump_table l =
     let dump (t,x) =
       dump_term t;
       print_string " : ";
@@ -1865,14 +1865,14 @@ module Proofobjects : Proofobject_primitives = struct
     in List.iter (fun c -> dump c; print_newline ()) l;;
 
   (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a term *)
-  let apply_subst s t = 
+  let apply_subst s t =
     let theta = map (fun (x,ty,t) -> (t,mk_var (x,ty))) s
     in vsubst theta t
 
   (* apply a substitution of the form [(x1,ty1,t1),...,(xn,tyn,tn)] to a proof *)
   let rec apply_subst_to_proof s = function
     | Proof (i,p,f) -> Proof(i,apply_subst_to_proof_content s p,f)
-  and apply_subst_to_proof_content s = function 
+  and apply_subst_to_proof_content s = function
     | Prefl t -> Prefl (apply_subst s t)
     | Pbeta (x,ht,t) -> Pbeta (x,ht,apply_subst s t)
     | Pinstt (p,l) -> Pinstt (apply_subst_to_proof s p, l)
@@ -1945,11 +1945,11 @@ module Proofobjects : Proofobject_primitives = struct
   and print_proof_content out hyps = function
     | Prefl t ->
         let t2 = term2nterm t in
-          out "(hol.refl "; 
+          out "(hol.refl ";
           print_type out (type_of [] t2); out " ";
-          print_term out t2; 
+          print_term out t2;
           out ")"
-    | Pbeta (x,ht,t) -> 
+    | Pbeta (x,ht,t) ->
 	let t' = term2nterm t in
         let ht' = hol_type2ntype ht in
         let tty = type_of [(x,ht')] t' in
@@ -1957,38 +1957,38 @@ module Proofobjects : Proofobject_primitives = struct
 	  print_type out ht'; out " ";
 	  print_type out tty; out " ";
           print_term out t'; out " ";
-          out x; 
+          out x;
           out ")";
     | Pinstt (p,l) -> failwith "print_proof_content: Pinstt rule not implemented yet"
-    | Pabs (p,x,ht) -> 
+    | Pabs (p,x,ht) ->
 	out "(hol.abs ";
 	out "_"; out " ";
 	out "_"; out " ";
 	out "_"; out " ";
 	out "_"; out " ";
         print_proof_content out hyps (content_of p);
-	out ")"	
+	out ")"
     | Pdisch (p,t) ->
 	let n = new_name () in
 	let t' = term2nterm t in
-	  out n; out ":"; print_term out t'; 
-          out " => "; 
+	  out n; out ":"; print_term out t';
+          out " => ";
           print_proof_content out ((t,n)::hyps) (content_of p)
     | Phyp t -> out (List.assoc t hyps);
     | Pspec (p,t)   -> failwith "print_proof_content: PSpec rule not implemented yet"
     | Pinst (p,l)   ->
 	let pc'   = apply_subst_to_proof_content l (content_of p) in
-        let hyps' = apply_subst_to_hyps l hyps in 
+        let hyps' = apply_subst_to_hyps l hyps in
 	  print_proof_content out hyps' pc'
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
     | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
-    | Ptrans (p1,p2) -> 
+    | Ptrans (p1,p2) ->
         (* invariant : a = b && t = u *)
 	(*
 	let c1 = conclusion_of p1 in
         let c2 = conclusion_of p2 in
-	let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in 
-	let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in 
+	let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in
+	let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in
         *)
 	out "(hol.trans ";
         out "_"; out " ";
@@ -1997,15 +1997,15 @@ module Proofobjects : Proofobject_primitives = struct
         out "_"; out " ";
         out "_"; out " ";
         out "_"; out " ";
-	print_proof_content out hyps (content_of p1); out " "; 
+	print_proof_content out hyps (content_of p1); out " ";
         print_proof_content out hyps (content_of p2); out ")"
     | Pcomb (p1,p2) ->
         (* invariant : a = c *)
         (*
 	let c1 = conclusion_of p1 in
         let c2 = conclusion_of p2 in
-	let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in 
-	let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in 
+	let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in
+	let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in
         *)
 	out "(hol.mk_comb ";
         out "_"; out " ";
@@ -2014,12 +2014,12 @@ module Proofobjects : Proofobject_primitives = struct
         out "_"; out " ";
         out "_"; out " ";
         out "_"; out " ";
-	print_proof_content out hyps (content_of p1); out " "; 
+	print_proof_content out hyps (content_of p1); out " ";
         print_proof_content out hyps (content_of p2); out ")"
-    | Peqmp (p1,p2) -> 
-	out "("; 
-	print_proof_content out hyps (content_of p1); out " "; 
-	print_proof_content out hyps (content_of p2); 
+    | Peqmp (p1,p2) ->
+	out "(";
+	print_proof_content out hyps (content_of p1); out " ";
+	print_proof_content out hyps (content_of p2);
 	out ")"
     | Pexists (p,t1,t2) -> failwith "print_proof_content: Pexists rule not implemented yet"
     | Pchoose(x,ht,p1,p2) -> failwith "print_proof_content: Pchoose rule not implemented yet"
@@ -2035,14 +2035,14 @@ module Proofobjects : Proofobject_primitives = struct
     | Pimpas (p1,p2) ->
 	out "(hol.impas ";
 	print_proof_content out hyps (content_of p1); out " ";
-	print_proof_content out hyps (content_of p2); 
+	print_proof_content out hyps (content_of p2);
 	out ")"
     | Paxm (x,t) -> failwith "print_proof_content: Paxm rule not implemented yet"
     | Pdef (s,ht,t) -> out ""
         (*
 	let t' = term2nterm t in
 	let ht' = hol_type2ntype ht in
-	out s; out ":"; print_type out ht'; out "."; 
+	out s; out ":"; print_type out ht'; out ".";
 	out "[]"; out s; out " --> "; print_term out t'; out "." *)
 	(* failwith "print_proof_content: Pdef rule not implemented yet" *)
     | Ptyintro (ht,x,l,y,z,t) -> failwith "print_proof_content: Ptyintro rule not implemented yet"
