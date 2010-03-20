@@ -1291,15 +1291,20 @@ module Proofobjects : Proofobject_primitives = struct
 	    let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in
 	    let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in
           *)
-	  out "(hol.trans ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          wp hyps p1; out " ";
-          wp hyps p2; out ")"
+          (match proof2deriv p1, proof2deriv p2 with
+             | Some (_, t1), Some (_, t2) ->
+                 (match t1, t2 with
+                    | Napp (Napp (Ncst (Heq a), u1), u2),
+                      Napp (Napp (Ncst (Heq _), _), u3) ->
+	                out "(hol.trans ";
+                        print_type out a; out " ";
+                        print_term out u1; out " ";
+                        print_term out u2; out " ";
+                        print_term out u3; out " ";
+                        wp hyps p1; out " ";
+                        wp hyps p2; out ")"
+                    | _, _ -> failwith "export_proof: a premise is not an equality in rul Nptrans")
+             | _, _ -> failwith "export_proof: a proof is wrong in rule Nptrans")
       | Npcomb (p1,p2) ->
           (* invariant : a = c *)
           (*
@@ -1540,8 +1545,8 @@ module Proofobjects : Proofobject_primitives = struct
 
     make_dependencies_aux dep_graph proof_of_thm [p];
 
-    let share_type ty = share_types out_sharet ty in
-    let share_term ty = share_terms out_share out_sharet ty in
+    (* let share_type ty = share_types out_sharet ty in *)
+    (* let share_term ty = share_terms out_share out_sharet ty in *)
 
 
     (* if thmname = (THEORY_NAME^"_DEF_T") then ( *)
