@@ -796,159 +796,6 @@ module Proofobjects : Proofobject_primitives = struct
     share_terms tm;;
 
 
-  let export_proof out share_type share_term p =
-
-    let rec wp hyps = function
-      | Nprefl t2 ->
-          out "(hol.refl ";
-          print_type out (type_of [] t2); out " ";
-          print_term out t2;
-          out ")"
-      | Npbeta (x,ht',t') -> failwith "export_proof: rule Npbeta not implemented yet"
-          (* let tty = type_of [(x,ht')] t' in *)
-	  (* out "(hol.beta "; *)
-	  (* print_type out ht'; out " "; *)
-	  (* print_type out tty; out " "; *)
-          (* print_term out t'; out " "; *)
-          (* out "x"; out (string_of_int x); *)
-          (* out ")" *)
-      | Npinstt(p,lambda) -> failwith "export_proof: rule Npinstt not implemented yet"
-          (* out "(Pinstt "; *)
-          (* wp p; *)
-          (* out " "; print_list out (fun (s, ty) -> *)
-          (*                            let ty2 = share_type ty in *)
-          (*                            out "("; print_names out s; out ", "; out ty2; out ")") "nil" "cons" lambda; out ")" *)
-      | Npabs (p,x,ht) ->
-	  out "(hol.abs ";
-	  out "_"; out " ";
-	  out "_"; out " ";
-	  out "_"; out " ";
-	  out "_"; out " ";
-          wp hyps p;
-	  out ")"
-      | Npdisch (p,t') ->
-	  let n = new_name () in
-	  out n; out ":"; print_term out t';
-          out " => ";
-          wp ((t',n)::hyps) p
-      | Nphyp t -> out (List.assoc t hyps);
-      | Npaxm(_, _) -> failwith "export_proof: rule Npaxm not implemented yet"
-      | Npdef(_, _, _) -> failwith "export_proof: rule Npdef not implemented yet"
-      | Nptyintro(_, _, _, _, _) -> failwith "export_proof: rule Nptyintro not implemented yet"
-      | Npspec(p,t) -> failwith "export_proof: rule Npspec not implemented yet"
-          (* let t2 = share_term t in *)
-          (* out "(Pspec "; *)
-          (* wp p; *)
-          (* out " "; out t2; out ")" *)
-      | Npinst (p,l) -> failwith "export_proof: rule Npinst not implemented yet"
-	  (* let pc'   = apply_subst_to_proof_content l (content_of p) in *)
-          (* let hyps' = apply_subst_to_hyps l hyps in *)
-	  (* print_proof_content out hyps' pc' *)
-      | Npgen(p,x,ty) -> failwith "export_proof: rule Npgen not implemented yet"
-      | Npsym p -> out "(hol.sym _ _ _ "; wp hyps p; out ")"
-      | Nptrans (p1,p2) ->
-          (* invariant : a = b && t = u *)
-	  (*
-	    let c1 = conclusion_of p1 in
-            let c2 = conclusion_of p2 in
-	    let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in
-	    let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in
-          *)
-	  out "(hol.trans ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          wp hyps p1; out " ";
-          wp hyps p2; out ")"
-      | Npcomb (p1,p2) ->
-          (* invariant : a = c *)
-          (*
-	    let c1 = conclusion_of p1 in
-            let c2 = conclusion_of p2 in
-	    let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in
-	    let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in
-          *)
-	  out "(hol.mk_comb ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          out "_"; out " ";
-          wp hyps p1; out " ";
-          wp hyps p2; out ")"
-      | Npeqmp (p1,p2) ->
-	  out "(";
-	  wp hyps p1; out " ";
-          wp hyps p2;
-	  out ")"
-      | Npexists (p,t1,t2) -> failwith "export_proof: Npexists rule not implemented yet"
-      | Npchoose(x,ht,p1,p2) -> failwith "export_proof: Npchoose rule not implemented yet"
-      | Npconj(p1,p2) -> failwith "export_proof: Npconj rule not implemented yet"
-      | Npconjunct1(p) -> failwith "export_proof: Npconjunct1 rule not implemented yet"
-      | Npconjunct2(p) -> failwith "export_proof: Npconjunct2 rule not implemented yet"
-      | Npdisj1 (p,t) -> failwith "export_proof: Npdisj1 rule not implemented yet"
-      | Npdisj2 (p,t) -> failwith "export_proof: Npdisj2 rule not implemented yet"
-      | Npdisjcases(p1,p2,p3) -> failwith "export_proof: Npdisjcases rule not implemented yet"
-      | Npnoti p -> failwith "export_proof: Npnoti rule not implemented yet"
-      | Npnote p -> failwith "export_proof: Npnote rule not implemented yet"
-      | Npcontr (p,t) -> failwith "export_proof: Npcontr rule not implemented yet"
-      | Npimpas (p1,p2) ->
-	out "(hol.impas ";
-          wp hyps p1; out " ";
-          wp hyps p2;
-	out ")"
-      | Nfact(thm) -> failwith "export_proof: Nfact rule not implemented yet"
-    in
-
-    wp [] p;;
-
-
-  let export_thm out name cl p =
-    out "\n\n"; out name; out " : hol.eps "; print_term out cl; out ".\n";
-    out "[] "; out name; out " --> "; export_proof out (fun _ -> ()) (fun _ -> ()) p; out ".";;
-
-  (* let export_ht out share_term h t thmname = *)
-  (*   out "\n\n\nDefinition "; out thmname; out "_h := "; *)
-  (*   (match h with *)
-  (*      | [] -> out "hyp_empty" *)
-  (*      | _ -> print_list out (fun tm -> *)
-  (*                               let tm2 = share_term tm in *)
-  (*                               out tm2) "nil" "cons" h); *)
-  (*   out ".\n\nDefinition "; out thmname; out "_t := "; *)
-  (*   let t2 = share_term t in *)
-  (*   out t2; out ".";; *)
-
-
-  (* let export_lemma out share_type share_term p thmname = *)
-  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
-  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; export_proof out share_type share_term p; out ").\nQed.";; *)
-
-
-  (* let export_lemma_def out tree thmname = *)
-  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
-  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; out tree; out ").\nQed.";; *)
-
-
-  (* let export_sig out thmname = *)
-  (*   out "\n\nDefinition "; out thmname; out "_def := my_exist "; out thmname; out "_lemma.";; *)
-
-
-  (* let export_def out thmname = *)
-  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
-
-
-  (* let export_tdef out thmname = *)
-  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
-
-
-  (* let export_axiom out thmname = *)
-  (*   out "\n\nAxiom "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
-
-
   (* Transforming a proof into a derivation *)
 
   let rec opt_nth n l =
@@ -1378,6 +1225,165 @@ module Proofobjects : Proofobject_primitives = struct
         Some (hyp_empty, hand (heq aty (Napp (Ndef (mk_name, mk_type), Napp (Ndef (dest_name, dest_type), a))) a)
                 (hequiv (Napp (p, r)) (heq rty (Napp (Ndef (dest_name, dest_type), Napp (Ndef (mk_name, mk_type), r))) r)))
   ;;
+
+
+  (* Proof exporation *)
+
+  let export_proof out share_type share_term p =
+
+    let rec wp hyps = function
+      | Nprefl t2 ->
+          out "(hol.refl ";
+          print_type out (type_of [] t2); out " ";
+          print_term out t2;
+          out ")"
+      | Npbeta (x,ht',t') -> failwith "export_proof: rule Npbeta not implemented yet"
+          (* let tty = type_of [(x,ht')] t' in *)
+	  (* out "(hol.beta "; *)
+	  (* print_type out ht'; out " "; *)
+	  (* print_type out tty; out " "; *)
+          (* print_term out t'; out " "; *)
+          (* out "x"; out (string_of_int x); *)
+          (* out ")" *)
+      | Npinstt(p,lambda) -> failwith "export_proof: rule Npinstt not implemented yet"
+          (* out "(Pinstt "; *)
+          (* wp p; *)
+          (* out " "; print_list out (fun (s, ty) -> *)
+          (*                            let ty2 = share_type ty in *)
+          (*                            out "("; print_names out s; out ", "; out ty2; out ")") "nil" "cons" lambda; out ")" *)
+      | Npabs (p,x,ht) ->
+	  out "(hol.abs ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+          wp hyps p;
+	  out ")"
+      | Npdisch (p,t') ->
+	  let n = new_name () in
+	  out n; out ":"; print_term out t';
+          out " => ";
+          wp ((t',n)::hyps) p
+      | Nphyp t -> out (List.assoc t hyps);
+      | Npaxm(_, _) -> failwith "export_proof: rule Npaxm not implemented yet"
+      | Npdef(_, _, _) -> failwith "export_proof: rule Npdef not implemented yet"
+      | Nptyintro(_, _, _, _, _) -> failwith "export_proof: rule Nptyintro not implemented yet"
+      | Npspec(p,t) -> failwith "export_proof: rule Npspec not implemented yet"
+          (* let t2 = share_term t in *)
+          (* out "(Pspec "; *)
+          (* wp p; *)
+          (* out " "; out t2; out ")" *)
+      | Npinst (p,l) -> failwith "export_proof: rule Npinst not implemented yet"
+	  (* let pc'   = apply_subst_to_proof_content l (content_of p) in *)
+          (* let hyps' = apply_subst_to_hyps l hyps in *)
+	  (* print_proof_content out hyps' pc' *)
+      | Npgen(p,x,ty) -> failwith "export_proof: rule Npgen not implemented yet"
+      | Npsym p ->
+          (match proof2deriv p with
+             | Some (_, Napp (Napp (Ncst (Heq a), u), v)) ->
+                 out "(hol.sym "; print_type out a; out " "; print_term out u; out " "; print_term out v; out " "; wp hyps p; out ")"
+             | _ -> failwith "export_proof: the premise of a Npsym rule must be an equality")
+      | Nptrans (p1,p2) ->
+          (* invariant : a = b && t = u *)
+	  (*
+	    let c1 = conclusion_of p1 in
+            let c2 = conclusion_of p2 in
+	    let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in
+	    let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in
+          *)
+	  out "(hol.trans ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          wp hyps p1; out " ";
+          wp hyps p2; out ")"
+      | Npcomb (p1,p2) ->
+          (* invariant : a = c *)
+          (*
+	    let c1 = conclusion_of p1 in
+            let c2 = conclusion_of p2 in
+	    let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in
+	    let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in
+          *)
+	  out "(hol.mk_comb ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          wp hyps p1; out " ";
+          wp hyps p2; out ")"
+      | Npeqmp (p1,p2) ->
+	  out "(";
+	  wp hyps p1; out " ";
+          wp hyps p2;
+	  out ")"
+      | Npexists (p,t1,t2) -> failwith "export_proof: Npexists rule not implemented yet"
+      | Npchoose(x,ht,p1,p2) -> failwith "export_proof: Npchoose rule not implemented yet"
+      | Npconj(p1,p2) -> failwith "export_proof: Npconj rule not implemented yet"
+      | Npconjunct1(p) -> failwith "export_proof: Npconjunct1 rule not implemented yet"
+      | Npconjunct2(p) -> failwith "export_proof: Npconjunct2 rule not implemented yet"
+      | Npdisj1 (p,t) -> failwith "export_proof: Npdisj1 rule not implemented yet"
+      | Npdisj2 (p,t) -> failwith "export_proof: Npdisj2 rule not implemented yet"
+      | Npdisjcases(p1,p2,p3) -> failwith "export_proof: Npdisjcases rule not implemented yet"
+      | Npnoti p -> failwith "export_proof: Npnoti rule not implemented yet"
+      | Npnote p -> failwith "export_proof: Npnote rule not implemented yet"
+      | Npcontr (p,t) -> failwith "export_proof: Npcontr rule not implemented yet"
+      | Npimpas (p1,p2) ->
+	out "(hol.impas ";
+          wp hyps p1; out " ";
+          wp hyps p2;
+	out ")"
+      | Nfact(thm) -> failwith "export_proof: Nfact rule not implemented yet"
+    in
+
+    wp [] p;;
+
+
+  let export_thm out name cl p =
+    out "\n\n"; out name; out " : hol.eps "; print_term out cl; out ".\n";
+    out "[] "; out name; out " --> "; export_proof out (fun _ -> ()) (fun _ -> ()) p; out ".";;
+
+  (* let export_ht out share_term h t thmname = *)
+  (*   out "\n\n\nDefinition "; out thmname; out "_h := "; *)
+  (*   (match h with *)
+  (*      | [] -> out "hyp_empty" *)
+  (*      | _ -> print_list out (fun tm -> *)
+  (*                               let tm2 = share_term tm in *)
+  (*                               out tm2) "nil" "cons" h); *)
+  (*   out ".\n\nDefinition "; out thmname; out "_t := "; *)
+  (*   let t2 = share_term t in *)
+  (*   out t2; out ".";; *)
+
+
+  (* let export_lemma out share_type share_term p thmname = *)
+  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
+  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; export_proof out share_type share_term p; out ").\nQed.";; *)
+
+
+  (* let export_lemma_def out tree thmname = *)
+  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
+  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; out tree; out ").\nQed.";; *)
+
+
+  (* let export_sig out thmname = *)
+  (*   out "\n\nDefinition "; out thmname; out "_def := my_exist "; out thmname; out "_lemma.";; *)
+
+
+  (* let export_def out thmname = *)
+  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
+
+
+  (* let export_tdef out thmname = *)
+  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
+
+
+  (* let export_axiom out thmname = *)
+  (*   out "\n\nAxiom "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
 
 
   (* Dealing with dependencies *)
