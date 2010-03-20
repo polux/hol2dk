@@ -573,42 +573,113 @@ module Proofobjects : Proofobject_primitives = struct
   let print_names out x = out (string_of_int x); out "%positive";;
 
 
-  let print_type (out: string -> unit) ty =
+  (* let print_type (out: string -> unit) ty = *)
 
-    let rec print_ntype = function
-      | Ntvar x -> out "(TVar "; print_names out x; out ")"
-      | Nbool -> out "Bool"
-      | Nnum -> out "Num"
-      | Narrow(a, b) -> out "("; print_ntype a; out " --> "; print_ntype b; out ")"
-      | Ntdef(s, l) -> out "(TDef "; print_names out s; out " "; print_list out print_ntype "Tnil" "Tcons" l; out ")" in
+  (*   let rec print_ntype = function *)
+  (*     | Ntvar x -> out "(TVar "; print_names out x; out ")" *)
+  (*     | Nbool -> out "Bool" *)
+  (*     | Nnum -> out "Num" *)
+  (*     | Narrow(a, b) -> out "("; print_ntype a; out " --> "; print_ntype b; out ")" *)
+  (*     | Ntdef(s, l) -> out "(TDef "; print_names out s; out " "; print_list out print_ntype "Tnil" "Tcons" l; out ")" in *)
 
-    print_ntype ty;;
+  (*   print_ntype ty;; *)
+
+
+  (* let print_cst out = function *)
+  (*   | Heq ty -> out "(Heq "; print_type out ty; out ")" *)
+  (*   | Heps ty -> out "(Heps "; print_type out ty; out ")" *)
+  (*   | Hand -> out "Hand" *)
+  (*   | Hor -> out "Hor" *)
+  (*   | Hnot -> out "Hnot" *)
+  (*   | Himp -> out "Himp" *)
+  (*   | Htrue -> out "Htrue" *)
+  (*   | Hfalse -> out "Hfalse" *)
+  (*   | Hforall ty -> out "(Hforall "; print_type out ty; out ")" *)
+  (*   | Hexists ty -> out "(Hexists "; print_type out ty; out ")";; *)
+
+
+  (* let print_term out t = *)
+
+  (*   let rec print_nterm = function *)
+  (*     | Ndbr n -> out "(Dbr "; out (string_of_int n); out ")" *)
+  (*     | Nvar(x, ty) -> out "(Var "; print_names out x; out " "; print_type out ty; out ")" *)
+  (*     | Ncst c -> out "(Cst "; print_cst out c; out ")" *)
+  (*     | Ndef(a, ty) -> out "(Def "; print_names out a; out " "; print_type out ty; out ")" *)
+  (*     | Napp(t1, t2) -> out "(App "; print_nterm t1; out " "; print_nterm t2; out ")" *)
+  (*     | Nabs(ty, t) -> out "(Abs "; print_type out ty; out " "; print_nterm t; out ")" in *)
+
+  (*   print_nterm t;; *)
+
+  let rec print_type out = function
+    | Ntvar i -> out "T_"; out (string_of_int i)
+    | Nbool -> out "hol.o"
+    | Nnum -> failwith "print_type: Nnum not a special type"
+    | Narrow (a,b) -> out "(hol.arrow "; print_type out a; out " "; print_type out b; out ")"
+    | Ntdef (i,l) -> failwith "print_type: Ntdef not implemented yet";;
 
 
   let print_cst out = function
-    | Heq ty -> out "(Heq "; print_type out ty; out ")"
-    | Heps ty -> out "(Heps "; print_type out ty; out ")"
-    | Hand -> out "Hand"
-    | Hor -> out "Hor"
-    | Hnot -> out "Hnot"
-    | Himp -> out "Himp"
-    | Htrue -> out "Htrue"
-    | Hfalse -> out "Hfalse"
-    | Hforall ty -> out "(Hforall "; print_type out ty; out ")"
-    | Hexists ty -> out "(Hexists "; print_type out ty; out ")";;
+    | Heq ty -> out "(hol.Eq "; print_type out ty; out ")"
+    (* | Heps of ntype *)
+    | Hand -> out "hol.And"
+    | Hor  -> out "hol.Or"
+    | Hnot -> out "hol.Not"
+    | Himp -> out "hol.Imp"
+    | Htrue -> out "hol.True"
+    | Hfalse -> out "hol.False"
+    | Hforall ty -> out "(hol.Forall "; print_type out ty; out ")"
+    | Hexists ty -> out "(hol.Exists "; print_type out ty; out ")"
+    | _ -> failwith "error print_cst";;
 
+  let new_name =
+    let term_names = ref (-1)
+    in function () ->
+      incr term_names;
+      "y"^(string_of_int !term_names)
 
-  let print_term out t =
+  let type_cst = function
+    | Heq ty -> Narrow (ty, Narrow (ty, Nbool))
+    (* | Heps of ntype *)
+    | Hand -> Narrow (Nbool, Narrow (Nbool, Nbool))
+    | Hor  -> Narrow (Nbool, Narrow (Nbool, Nbool))
+    | Hnot -> Narrow (Nbool, Nbool)
+    | Himp -> Narrow (Nbool, Narrow (Nbool, Nbool))
+    | Htrue -> Nbool
+    | Hfalse -> Nbool
+    | Hforall ty -> Narrow (Narrow (ty, Nbool), Nbool)
+    | Hexists ty -> Narrow (Narrow (ty, Nbool), Nbool)
+    | _ -> failwith "error type_cst"
 
-    let rec print_nterm = function
-      | Ndbr n -> out "(Dbr "; out (string_of_int n); out ")"
-      | Nvar(x, ty) -> out "(Var "; print_names out x; out " "; print_type out ty; out ")"
-      | Ncst c -> out "(Cst "; print_cst out c; out ")"
-      | Ndef(a, ty) -> out "(Def "; print_names out a; out " "; print_type out ty; out ")"
-      | Napp(t1, t2) -> out "(App "; print_nterm t1; out " "; print_nterm t2; out ")"
-      | Nabs(ty, t) -> out "(Abs "; print_type out ty; out " "; print_nterm t; out ")" in
+  let rec type_of ldbr = function
+    | Ndbr i -> snd (List.nth ldbr i)
+    | Nvar (_, ty) ->
+        ty
+    | Ncst n ->
+        type_cst n
+    | Ndef _ -> failwith "Error type_of: no Ndef for the moment"
+    | Napp (t1, _) ->
+        (match type_of ldbr t1 with
+           | Narrow (_, ty) -> ty
+           | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
+    | Nabs (ty, t) ->
+        Narrow (ty, type_of (("",ty)::ldbr) t)
 
-    print_nterm t;;
+  let rec print_term out ldbr = function
+    | Ndbr i -> out (fst (List.nth ldbr i))
+    | Nvar (i, ty) -> out "x"; out (string_of_int i)
+    | Ncst n -> print_cst out n
+    | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
+    | Napp (t1,t2) ->
+        (match type_of ldbr t1 with
+           | Narrow (ty1, ty2) ->
+               out "(hol.App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
+           | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
+    | Nabs (ty,t) ->
+        let n = new_name () in
+	out "(hol.Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n;
+	out ": hol.hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
+
+  let print_term out = print_term out [];;
 
 
   (* Exportation *)
@@ -727,181 +798,155 @@ module Proofobjects : Proofobject_primitives = struct
 
   let export_proof out share_type share_term p =
 
-    let rec wp = function
-      | Nprefl tm ->
-          let tm2 = share_term tm in
-          out "(Prefl "; out tm2; out ")"
-      | Npbeta (n, ty, tm) ->
-          let tm2 = share_term tm in
-          let ty2 = share_type ty in
-          out "(Pbeta "; print_names out n; out " "; out ty2; out " "; out tm2; out ")"
-      | Npinstt(p,lambda) ->
-          out "(Pinstt ";
-          wp p;
-          out " "; print_list out (fun (s, ty) ->
-                                     let ty2 = share_type ty in
-                                     out "("; print_names out s; out ", "; out ty2; out ")") "nil" "cons" lambda; out ")"
-      | Npabs(p,x,ty) ->
-          let ty2 = share_type ty in
-          out "(Pabs ";
-          wp p;
-          out " "; print_names out x;
-          out " "; out ty2; out ")"
-      | Npdisch(p,tm) ->
-          let tm2 = share_term tm in
-          out "(Pdisch ";
-          wp p;
-          out " "; out tm2; out ")"
-      | Nphyp tm ->
-          let tm2 = share_term tm in
-          out "(Phyp "; out tm2; out ")"
-      | Npaxm(_, _) -> ()
-      | Npdef(_, _, _) -> ()
-      | Nptyintro(_, _, _, _, _) -> ()
-      | Npspec(p,t) ->
-          let t2 = share_term t in
-          out "(Pspec ";
-          wp p;
-          out " "; out t2; out ")"
-      | Npinst(p,theta) ->
-          out "(Pinst ";
-          wp p;
-          out " "; print_list out (fun (s, ty, t) ->
-                                     let t2 = share_term t in
-                                     let ty2 = share_type ty in
-                                     out "("; print_names out s; out ", "; out ty2; out ", "; out t2; out ")") "nil" "cons" theta; out ")"
-      | Npgen(p,x,ty) ->
-          let ty2 = share_type ty in
-          out "(Pgen ";
-          wp p;
-          out " "; print_names out x; out " "; out ty2; out ")"
-      | Npsym p ->
-          out "(Psym ";
-          wp p;
+    let rec wp hyps = function
+      | Nprefl t2 ->
+          out "(hol.refl ";
+          print_type out (type_of [] t2); out " ";
+          print_term out t2;
           out ")"
-      |  Nptrans(p1,p2) ->
-           out "(Ptrans ";
-           wp p1;
-           out " ";
-           wp p2;
-           out ")"
-      | Npcomb(p1,p2) ->
-          out "(Pcomb ";
-          wp p1;
-          out " ";
-          wp p2;
-          out ")"
-      | Npeqmp(p1,p2) ->
-          out "(Peqmp ";
-          wp p1;
-          out " ";
-          wp p2;
-          out ")"
-      | Npexists(p,ex,w) ->
-          let ex2 = share_term ex in
-          let w2 = share_term w in
-          out "(Pexists ";
-          wp p;
-          out " "; out ex2; out " "; out w2; out ")"
-      | Npchoose(x,ty,p1,p2) ->
-          let ty2 = share_type ty in
-          out "(Pchoose "; print_names out x; out " "; out ty2; out " ";
-          wp p1;
-          out " ";
-          wp p2;
-          out ")"
-      | Npconj(p1,p2) ->
-          out "(Pconj ";
-          wp p1;
-          out " ";
-          wp p2;
-          out ")"
-      | Npimpas(p1,p2) ->
-          out "(Pimpas ";
-          wp p1;
-          out " ";
-          wp p2;
-          out ")"
-      | Npconjunct1 p ->
-          out "(Pconjunct1 ";
-          wp p;
-          out ")"
-      |  Npconjunct2 p ->
-           out "(Pconjunct2 ";
-           wp p;
-           out ")"
-      | Npdisj1(p,tm) ->
-          let tm2 = share_term tm in
-          out "(Pdisj1 ";
-          wp p;
-          out " "; out tm2; out ")"
-      | Npdisj2(p,tm) ->
-          let tm2 = share_term tm in
-          out "(Pdisj2 ";
-          wp p;
-          out " "; out tm2; out ")"
-      | Npdisjcases(p1,p2,p3) ->
-          out "(Pdisjcases ";
-          wp p1;
-          out " ";
-          wp p2;
-          out " ";
-          wp p3;
-          out ")"
-      | Npnoti p ->
-          out "(Pnoti ";
-          wp p;
-          out ")"
-      | Npnote p ->
-          out "(Pnote ";
-          wp p;
-          out ")"
-      | Npcontr(p,tm) ->
-          let tm2 = share_term tm in
-          out "(Pcontr ";
-          wp p;
-          out " "; out tm2; out ")"
-      | Nfact(thm) -> out "(Poracle "; out thm; out "_def)" in
+      | Npbeta (x,ht',t') -> failwith "export_proof: rule Npbeta not implemented yet"
+          (* let tty = type_of [(x,ht')] t' in *)
+	  (* out "(hol.beta "; *)
+	  (* print_type out ht'; out " "; *)
+	  (* print_type out tty; out " "; *)
+          (* print_term out t'; out " "; *)
+          (* out "x"; out (string_of_int x); *)
+          (* out ")" *)
+      | Npinstt(p,lambda) -> failwith "export_proof: rule Npinstt not implemented yet"
+          (* out "(Pinstt "; *)
+          (* wp p; *)
+          (* out " "; print_list out (fun (s, ty) -> *)
+          (*                            let ty2 = share_type ty in *)
+          (*                            out "("; print_names out s; out ", "; out ty2; out ")") "nil" "cons" lambda; out ")" *)
+      | Npabs (p,x,ht) ->
+	  out "(hol.abs ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+	  out "_"; out " ";
+          wp hyps p;
+	  out ")"
+      | Npdisch (p,t') ->
+	  let n = new_name () in
+	  out n; out ":"; print_term out t';
+          out " => ";
+          wp ((t',n)::hyps) p
+      | Nphyp t -> out (List.assoc t hyps);
+      | Npaxm(_, _) -> failwith "export_proof: rule Npaxm not implemented yet"
+      | Npdef(_, _, _) -> failwith "export_proof: rule Npdef not implemented yet"
+      | Nptyintro(_, _, _, _, _) -> failwith "export_proof: rule Nptyintro not implemented yet"
+      | Npspec(p,t) -> failwith "export_proof: rule Npspec not implemented yet"
+          (* let t2 = share_term t in *)
+          (* out "(Pspec "; *)
+          (* wp p; *)
+          (* out " "; out t2; out ")" *)
+      | Npinst (p,l) -> failwith "export_proof: rule Npinst not implemented yet"
+	  (* let pc'   = apply_subst_to_proof_content l (content_of p) in *)
+          (* let hyps' = apply_subst_to_hyps l hyps in *)
+	  (* print_proof_content out hyps' pc' *)
+      | Npgen(p,x,ty) -> failwith "export_proof: rule Npgen not implemented yet"
+      | Npsym p -> out "(hol.sym _ _ _ "; wp hyps p; out ")"
+      | Nptrans (p1,p2) ->
+          (* invariant : a = b && t = u *)
+	  (*
+	    let c1 = conclusion_of p1 in
+            let c2 = conclusion_of p2 in
+	    let Napp(Napp (Ncst (Heq a),s),t) = term2nterm c1 in
+	    let Napp(Napp (Ncst (Heq b),u),v) = term2nterm c2 in
+          *)
+	  out "(hol.trans ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          wp hyps p1; out " ";
+          wp hyps p2; out ")"
+      | Npcomb (p1,p2) ->
+          (* invariant : a = c *)
+          (*
+	    let c1 = conclusion_of p1 in
+            let c2 = conclusion_of p2 in
+	    let Napp(Napp (Ncst (Heq (Narrow a b)),f),g) = term2nterm c1 in
+	    let Napp(Napp (Ncst (Heq c),x),y) = term2nterm c2 in
+          *)
+	  out "(hol.mk_comb ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          out "_"; out " ";
+          wp hyps p1; out " ";
+          wp hyps p2; out ")"
+      | Npeqmp (p1,p2) ->
+	  out "(";
+	  wp hyps p1; out " ";
+          wp hyps p2;
+	  out ")"
+      | Npexists (p,t1,t2) -> failwith "export_proof: Npexists rule not implemented yet"
+      | Npchoose(x,ht,p1,p2) -> failwith "export_proof: Npchoose rule not implemented yet"
+      | Npconj(p1,p2) -> failwith "export_proof: Npconj rule not implemented yet"
+      | Npconjunct1(p) -> failwith "export_proof: Npconjunct1 rule not implemented yet"
+      | Npconjunct2(p) -> failwith "export_proof: Npconjunct2 rule not implemented yet"
+      | Npdisj1 (p,t) -> failwith "export_proof: Npdisj1 rule not implemented yet"
+      | Npdisj2 (p,t) -> failwith "export_proof: Npdisj2 rule not implemented yet"
+      | Npdisjcases(p1,p2,p3) -> failwith "export_proof: Npdisjcases rule not implemented yet"
+      | Npnoti p -> failwith "export_proof: Npnoti rule not implemented yet"
+      | Npnote p -> failwith "export_proof: Npnote rule not implemented yet"
+      | Npcontr (p,t) -> failwith "export_proof: Npcontr rule not implemented yet"
+      | Npimpas (p1,p2) ->
+	out "(hol.impas ";
+          wp hyps p1; out " ";
+          wp hyps p2;
+	out ")"
+      | Nfact(thm) -> failwith "export_proof: Nfact rule not implemented yet"
+    in
 
-    wp p;;
-
-
-  let export_ht out share_term h t thmname =
-    out "\n\n\nDefinition "; out thmname; out "_h := ";
-    (match h with
-       | [] -> out "hyp_empty"
-       | _ -> print_list out (fun tm ->
-                                let tm2 = share_term tm in
-                                out tm2) "nil" "cons" h);
-    out ".\n\nDefinition "; out thmname; out "_t := ";
-    let t2 = share_term t in
-    out t2; out ".";;
-
-
-  let export_lemma out share_type share_term p thmname =
-    out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname;
-    out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; export_proof out share_type share_term p; out ").\nQed.";;
-
-
-  let export_lemma_def out tree thmname =
-    out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname;
-    out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; out tree; out ").\nQed.";;
+    wp [] p;;
 
 
-  let export_sig out thmname =
-    out "\n\nDefinition "; out thmname; out "_def := my_exist "; out thmname; out "_lemma.";;
+  let export_thm out name cl p =
+    out "\n\n"; out name; out " : hol.eps "; print_term out cl; out ".\n";
+    out "[] "; out name; out " --> "; export_proof out (fun _ -> ()) (fun _ -> ()) p; out ".";;
+
+  (* let export_ht out share_term h t thmname = *)
+  (*   out "\n\n\nDefinition "; out thmname; out "_h := "; *)
+  (*   (match h with *)
+  (*      | [] -> out "hyp_empty" *)
+  (*      | _ -> print_list out (fun tm -> *)
+  (*                               let tm2 = share_term tm in *)
+  (*                               out tm2) "nil" "cons" h); *)
+  (*   out ".\n\nDefinition "; out thmname; out "_t := "; *)
+  (*   let t2 = share_term t in *)
+  (*   out t2; out ".";; *)
 
 
-  let export_def out thmname =
-    out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";;
+  (* let export_lemma out share_type share_term p thmname = *)
+  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
+  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; export_proof out share_type share_term p; out ").\nQed.";; *)
 
 
-  let export_tdef out thmname =
-    out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";;
+  (* let export_lemma_def out tree thmname = *)
+  (*   out "\n\nLemma "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; *)
+  (*   out "_t.\nProof.\n  vm_cast_no_check (proof2deriv_correct "; out tree; out ").\nQed.";; *)
 
 
-  let export_axiom out thmname =
-    out "\n\nAxiom "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";;
+  (* let export_sig out thmname = *)
+  (*   out "\n\nDefinition "; out thmname; out "_def := my_exist "; out thmname; out "_lemma.";; *)
+
+
+  (* let export_def out thmname = *)
+  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
+
+
+  (* let export_tdef out thmname = *)
+  (*   out "\n\nParameter "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
+
+
+  (* let export_axiom out thmname = *)
+  (*   out "\n\nAxiom "; out thmname; out "_lemma : deriv "; out thmname; out "_h "; out thmname; out "_t.";; *)
 
 
   (* Transforming a proof into a derivation *)
@@ -1331,7 +1376,8 @@ module Proofobjects : Proofobject_primitives = struct
         let r = Nvar(r_name, rty) in
 
         Some (hyp_empty, hand (heq aty (Napp (Ndef (mk_name, mk_type), Napp (Ndef (dest_name, dest_type), a))) a)
-                (hequiv (Napp (p, r)) (heq rty (Napp (Ndef (dest_name, dest_type), Napp (Ndef (mk_name, mk_type), r))) r)));;
+                (hequiv (Napp (p, r)) (heq rty (Napp (Ndef (dest_name, dest_type), Napp (Ndef (mk_name, mk_type), r))) r)))
+  ;;
 
 
   (* Dealing with dependencies *)
@@ -1349,15 +1395,15 @@ module Proofobjects : Proofobject_primitives = struct
         let write_proof p il =
 
           let rec share_info_of p il =
-            match (disk_info_of p) with
-              | Some (thyname,thmname) -> Some(thyname,thmname,il)
-              | None ->
-                  if do_share p then
-                    let name = THEORY_NAME^"_"^(get_iname ()) in
-                    set_disk_info_of p THEORY_NAME name;
-                    Depgraph.Dep.add_thm dep_graph name;
-                    Some(THEORY_NAME,name,(name,p,None)::il)
-                  else
+            (* match (disk_info_of p) with *)
+            (*   | Some (thyname,thmname) -> Some(thyname,thmname,il) *)
+            (*   | None -> *)
+            (*       if do_share p then *)
+            (*         let name = THEORY_NAME^"_"^(get_iname ()) in *)
+            (*         set_disk_info_of p THEORY_NAME name; *)
+            (*         Depgraph.Dep.add_thm dep_graph name; *)
+            (*         Some(THEORY_NAME,name,(name,p,None)::il) *)
+            (*       else *)
                     None
 
           and wp' il = function
@@ -1492,112 +1538,112 @@ module Proofobjects : Proofobject_primitives = struct
     let share_term ty = share_terms out_share out_sharet ty in
 
 
-    if thmname = (THEORY_NAME^"_DEF_T") then (
-      match content_of pr with
-        | Pdef (_, _, t) ->
-            let tm = hequiv htrue (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_T" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__slash__backslash_") then (
-      match content_of pr with
-        | Pdef (_, _, t) ->
-            let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hand) (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_AND" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__equal__equal__greaterthan_") then (
-      match content_of pr with
-        | Pdef (_, _, t) ->
-            let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Himp) (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_IMP" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__exclamationmark_") then (
-      match content_of pr with
-        | Pdef (_, a, t) ->
-            let a2 = hol_type2ntype a in
-            (match a2 with
-               | Narrow (Narrow (b, _), _) ->
-                   let tm = heq a2 (Ncst (Hforall b)) (term2nterm t) in
-                   Hashtbl.add derivs thmname (hyp_empty, tm);
-                   export_ht out share_term hyp_empty tm thmname;
-                   export_lemma_def out "DEF_FORALL" thmname;
-                   export_sig out thmname
-               | _ -> ())
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__questionmark_") then (
-      match content_of pr with
-        | Pdef (_, a, t) ->
-            let a2 = hol_type2ntype a in
-            (match a2 with
-               | Narrow (Narrow (b, _), _) ->
-                   let tm = heq a2 (Ncst (Hexists b)) (term2nterm t) in
-                   Hashtbl.add derivs thmname (hyp_empty, tm);
-                   export_ht out share_term hyp_empty tm thmname;
-                   export_lemma_def out "DEF_EXISTS" thmname;
-                   export_sig out thmname
-               | _ -> ())
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__backslash__slash_") then (
-      match content_of pr with
-        | Pdef (_, _, t) ->
-            let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hor) (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_OR" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF_F") then (
-      match content_of pr with
-        | Pdef (_, _, t) ->
-            let tm = hequiv (Ncst Hfalse) (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_F" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__tilde_") then (
-      match content_of pr with
-        | Pdef(_, _, t) ->
-            let tm = heq (Narrow (Nbool, Nbool)) (Ncst Hnot) (term2nterm t) in
-            Hashtbl.add derivs thmname (hyp_empty, tm);
-            export_ht out share_term hyp_empty tm thmname;
-            export_lemma_def out "DEF_NOT" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_DEF__FALSITY_") then (
-      let tm = heq Nbool (Ncst Hfalse) (Ncst Hfalse) in
-      Hashtbl.add derivs thmname (hyp_empty, tm);
-      export_ht out share_term hyp_empty tm thmname;
-      export_lemma_def out "(Prefl (Cst Hfalse))" thmname;
-      export_sig out thmname
-    ) else if thmname = (THEORY_NAME^"_ax__1") then (
-      match content_of pr with
-        | Paxm (_, tm) ->
-            let tm2 = term2nterm tm in
-            Hashtbl.add derivs thmname (hyp_empty, tm2);
-            export_ht out share_term hyp_empty tm2 thmname;
-            export_lemma_def out "ETA_AX" thmname;
-            export_sig out thmname
-        | _ -> ()
-    ) else if thmname = (THEORY_NAME^"_ax__2") then (
-      match content_of pr with
-        | Paxm (_, tm) ->
-            let tm2 = term2nterm tm in
-            Hashtbl.add derivs thmname (hyp_empty, tm2);
-            export_ht out share_term hyp_empty tm2 thmname;
-            export_lemma_def out "SELECT_AX" thmname;
-            export_sig out thmname
-        | _ -> ()
+    (* if thmname = (THEORY_NAME^"_DEF_T") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, _, t) -> *)
+    (*         let tm = hequiv htrue (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_T" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__slash__backslash_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, _, t) -> *)
+    (*         let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hand) (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_AND" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__equal__equal__greaterthan_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, _, t) -> *)
+    (*         let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Himp) (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_IMP" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__exclamationmark_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, a, t) -> *)
+    (*         let a2 = hol_type2ntype a in *)
+    (*         (match a2 with *)
+    (*            | Narrow (Narrow (b, _), _) -> *)
+    (*                let tm = heq a2 (Ncst (Hforall b)) (term2nterm t) in *)
+    (*                Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*                export_ht out share_term hyp_empty tm thmname; *)
+    (*                export_lemma_def out "DEF_FORALL" thmname; *)
+    (*                export_sig out thmname *)
+    (*            | _ -> ()) *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__questionmark_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, a, t) -> *)
+    (*         let a2 = hol_type2ntype a in *)
+    (*         (match a2 with *)
+    (*            | Narrow (Narrow (b, _), _) -> *)
+    (*                let tm = heq a2 (Ncst (Hexists b)) (term2nterm t) in *)
+    (*                Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*                export_ht out share_term hyp_empty tm thmname; *)
+    (*                export_lemma_def out "DEF_EXISTS" thmname; *)
+    (*                export_sig out thmname *)
+    (*            | _ -> ()) *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__backslash__slash_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, _, t) -> *)
+    (*         let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hor) (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_OR" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF_F") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef (_, _, t) -> *)
+    (*         let tm = hequiv (Ncst Hfalse) (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_F" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__tilde_") then ( *)
+    (*   match content_of pr with *)
+    (*     | Pdef(_, _, t) -> *)
+    (*         let tm = heq (Narrow (Nbool, Nbool)) (Ncst Hnot) (term2nterm t) in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*         export_ht out share_term hyp_empty tm thmname; *)
+    (*         export_lemma_def out "DEF_NOT" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_DEF__FALSITY_") then ( *)
+    (*   let tm = heq Nbool (Ncst Hfalse) (Ncst Hfalse) in *)
+    (*   Hashtbl.add derivs thmname (hyp_empty, tm); *)
+    (*   export_ht out share_term hyp_empty tm thmname; *)
+    (*   export_lemma_def out "(Prefl (Cst Hfalse))" thmname; *)
+    (*   export_sig out thmname *)
+    (* ) else if thmname = (THEORY_NAME^"_ax__1") then ( *)
+    (*   match content_of pr with *)
+    (*     | Paxm (_, tm) -> *)
+    (*         let tm2 = term2nterm tm in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm2); *)
+    (*         export_ht out share_term hyp_empty tm2 thmname; *)
+    (*         export_lemma_def out "ETA_AX" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
+    (* ) else if thmname = (THEORY_NAME^"_ax__2") then ( *)
+    (*   match content_of pr with *)
+    (*     | Paxm (_, tm) -> *)
+    (*         let tm2 = term2nterm tm in *)
+    (*         Hashtbl.add derivs thmname (hyp_empty, tm2); *)
+    (*         export_ht out share_term hyp_empty tm2 thmname; *)
+    (*         export_lemma_def out "SELECT_AX" thmname; *)
+    (*         export_sig out thmname *)
+    (*     | _ -> () *)
 
-    ) else (
+    (* ) else ( *)
 
       Depgraph.Dep_top.iter_top (
         fun thm ->
@@ -1608,17 +1654,18 @@ module Proofobjects : Proofobject_primitives = struct
              (match proof2deriv p with
                 | Some (h, t) ->
                     Hashtbl.add derivs thm (h, t);
-                    export_ht out share_term h t thm;
-                    (match p with
-                       | Npdef _ -> export_def out thm
-                       | Nptyintro _ -> export_tdef out thm
-                       | Npaxm _ -> export_axiom out thm
-                       | _ -> export_lemma out share_type share_term p thm);
-                    export_sig out thm
+                    export_thm out thm t p
+                    (* export_ht out share_term h t thm; *)
+                    (* (match p with *)
+                    (*    | Npdef _ -> export_def out thm *)
+                    (*    | Nptyintro _ -> export_tdef out thm *)
+                    (*    | Npaxm _ -> export_axiom out thm *)
+                    (*    | _ -> export_lemma out share_type share_term p thm); *)
+                    (* export_sig out thm *)
                 | None -> failwith ("Erreur make_dependencies "^thm^" de "^thmname^": no derivation associated to the proof\n"))
            with | Not_found -> failwith ("Erreur make_dependencies "^thm^": proof_of_thm not found\n"));
       ) dep_graph
-    );
+    (* ); *)
 ;;
 
 
@@ -1636,190 +1683,120 @@ module Proofobjects : Proofobject_primitives = struct
   let proof_database () = !the_proof_database;;
 
 
-  (* Utilities to define Coq interpretation functions *)
+  (* (\* Utilities to define Coq interpretation functions *\) *)
 
-  let ut = Hashtbl.create 17;;
+  (* let ut = Hashtbl.create 17;; *)
 
-  let ask_ut () =
-    try (
-      let filein = open_in "interpretation.txt" in
-      let line = ref 0 in
+  (* let ask_ut () = *)
+  (*   try ( *)
+  (*     let filein = open_in "interpretation.txt" in *)
+  (*     let line = ref 0 in *)
 
-      try
-        while true do
-          incr line;
-          let s1 = input_line filein in
-          incr line;
-          let s2 = input_line filein in
-          Hashtbl.add ut s1 s2
-        done
-      with
-        | End_of_file -> close_in filein
-        | _ -> failwith ("Error line "^(string_of_int !line)^".")
-    ) with | Sys_error _ -> ()
-  ;;
+  (*     try *)
+  (*       while true do *)
+  (*         incr line; *)
+  (*         let s1 = input_line filein in *)
+  (*         incr line; *)
+  (*         let s2 = input_line filein in *)
+  (*         Hashtbl.add ut s1 s2 *)
+  (*       done *)
+  (*     with *)
+  (*       | End_of_file -> close_in filein *)
+  (*       | _ -> failwith ("Error line "^(string_of_int !line)^".") *)
+  (*   ) with | Sys_error _ -> () *)
+  (* ;; *)
 
-  let tc_regexp = Str.regexp "\?[0-9]*";;
+  (* let tc_regexp = Str.regexp "\?[0-9]*";; *)
 
-  let make_tc_parameter out x n =
-    if Str.string_match tc_regexp x 0 then (
-      let i = Str.match_end () in
-      if i <> String.length x then (
-        out "\nParameter "; out THEORY_NAME; out "_idT_"; out (mfc x); out " : Type.\nParameter "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x);
-        out " : "; out THEORY_NAME; out "_idT_"; out (mfc x); out "."
-      )
-    ) else (
-      out "\nParameter "; out THEORY_NAME; out "_idT_"; out (mfc x); out " : Type.\nParameter "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x);
-      out " : "; out THEORY_NAME; out "_idT_"; out (mfc x); out "."
-    );;
+  (* let make_tc_parameter out x n = *)
+  (*   if Str.string_match tc_regexp x 0 then ( *)
+  (*     let i = Str.match_end () in *)
+  (*     if i <> String.length x then ( *)
+  (*       out "\nParameter "; out THEORY_NAME; out "_idT_"; out (mfc x); out " : Type.\nParameter "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); *)
+  (*       out " : "; out THEORY_NAME; out "_idT_"; out (mfc x); out "." *)
+  (*     ) *)
+  (*   ) else ( *)
+  (*     out "\nParameter "; out THEORY_NAME; out "_idT_"; out (mfc x); out " : Type.\nParameter "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); *)
+  (*     out " : "; out THEORY_NAME; out "_idT_"; out (mfc x); out "." *)
+  (*   );; *)
 
-  let make_tc_list out x n =
-    if Str.string_match tc_regexp x 0 then (
-      let i = Str.match_end () in
-      if i <> String.length x then (
-        out "\n("; out (string_of_int n); out ", mkTT "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); out ")::"
-      )
-    ) else (
-      out "\n("; out (string_of_int n); out ", mkTT "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); out ")::"
-    );;
-
-
-  let defT_ut = Hashtbl.create 17;;
-
-  let make_tdt_parameter out x _ =
-    try (
-      let y = Hashtbl.find ut x in
-      Hashtbl.add defT_ut x y
-    ) with | Not_found -> (
-      out "\nParameter "; out THEORY_NAME; out "_defT_"; out (mfc x); out " : Type.";
-      out "\nParameter "; out THEORY_NAME; out "_defT_inhab_"; out (mfc x); out " : "; out THEORY_NAME; out "_defT_"; out (mfc x); out ".\n";
-      Hashtbl.add defT_ut x ("fun _ => mkTT "^THEORY_NAME^"_defT_inhab_"^(mfc x))
-    );;
-
-  let make_tdt_list out x n =
-    try (
-      let s = Hashtbl.find defT_ut x in
-      out "\n("; out (string_of_int n); out ", "; out s; out ")::";
-    ) with | Not_found -> (
-      out "\n("; out (string_of_int n); out ", fun _ => mkTT tt)::"
-    );;
+  (* let make_tc_list out x n = *)
+  (*   if Str.string_match tc_regexp x 0 then ( *)
+  (*     let i = Str.match_end () in *)
+  (*     if i <> String.length x then ( *)
+  (*       out "\n("; out (string_of_int n); out ", mkTT "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); out ")::" *)
+  (*     ) *)
+  (*   ) else ( *)
+  (*     out "\n("; out (string_of_int n); out ", mkTT "; out THEORY_NAME; out "_idT_inhab_"; out (mfc x); out ")::" *)
+  (*   );; *)
 
 
-  let se_regexp = Str.regexp "_[0-9]*";;
+  (* let defT_ut = Hashtbl.create 17;; *)
 
-  let make_se_parameter out x (_,ty) =
-    if Str.string_match se_regexp x 0 then (
-      let i = Str.match_end () in
-      if i <> String.length x then (
-        out "\nParameter "; out THEORY_NAME; out "_idV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "."
-      )
-    ) else (
-      out "\nParameter "; out THEORY_NAME; out "_idV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "."
-    );;
+  (* let make_tdt_parameter out x _ = *)
+  (*   try ( *)
+  (*     let y = Hashtbl.find ut x in *)
+  (*     Hashtbl.add defT_ut x y *)
+  (*   ) with | Not_found -> ( *)
+  (*     out "\nParameter "; out THEORY_NAME; out "_defT_"; out (mfc x); out " : Type."; *)
+  (*     out "\nParameter "; out THEORY_NAME; out "_defT_inhab_"; out (mfc x); out " : "; out THEORY_NAME; out "_defT_"; out (mfc x); out ".\n"; *)
+  (*     Hashtbl.add defT_ut x ("fun _ => mkTT "^THEORY_NAME^"_defT_inhab_"^(mfc x)) *)
+  (*   );; *)
 
-  let make_se_list out x (n,ty) =
-    if Str.string_match se_regexp x 0 then (
-      let i = Str.match_end () in
-      if i <> String.length x then (
-        out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_idV_"; out (mfc x); out ")::"
-      )
-    ) else (
-      out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_idV_"; out (mfc x); out ")::"
-    );;
+  (* let make_tdt_list out x n = *)
+  (*   try ( *)
+  (*     let s = Hashtbl.find defT_ut x in *)
+  (*     out "\n("; out (string_of_int n); out ", "; out s; out ")::"; *)
+  (*   ) with | Not_found -> ( *)
+  (*     out "\n("; out (string_of_int n); out ", fun _ => mkTT tt)::" *)
+  (*   );; *)
 
 
-  let defV_ut = Hashtbl.create 17;;
+  (* let se_regexp = Str.regexp "_[0-9]*";; *)
 
-  let make_sdt_parameter out x (_,ty,_) =
-    if ((x <> "T") && (x <> "/\\") && (x <> "==>") && (x <> "!") && (x <> "?") && (x <> "\\/") && (x <> "F") && (x <> "~") && (x <> "_FALSITY_")) then (
-      try (
-        let y = Hashtbl.find ut x in
-        Hashtbl.add defV_ut x y
-      ) with | Not_found -> (
-        out "\nParameter "; out THEORY_NAME; out "_defV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "."
-      )
-    );;
+  (* let make_se_parameter out x (_,ty) = *)
+  (*   if Str.string_match se_regexp x 0 then ( *)
+  (*     let i = Str.match_end () in *)
+  (*     if i <> String.length x then ( *)
+  (*       out "\nParameter "; out THEORY_NAME; out "_idV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "." *)
+  (*     ) *)
+  (*   ) else ( *)
+  (*     out "\nParameter "; out THEORY_NAME; out "_idV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "." *)
+  (*   );; *)
 
-  let make_sdt_list out x (n,ty,_) =
-    try (
-      let s = Hashtbl.find defV_ut x in
-      out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " ("; out s; out "))::"
-    ) with | Not_found -> (
-      if ((x <> "T") && (x <> "/\\") && (x <> "==>") && (x <> "!") && (x <> "?") && (x <> "\\/") && (x <> "F") && (x <> "~") && (x <> "_FALSITY_")) then (
-        out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_defV_"; out (mfc x); out ")::"
-      )
-    );;
-
-  let rec print_type out = function
-    | Ntvar i -> out "T_"; out (string_of_int i)
-    | Nbool -> out "hol.o"
-    | Nnum -> failwith "print_type: Nnum not a special type"
-    | Narrow (a,b) -> out "(hol.arrow "; print_type out a; out " "; print_type out b; out ")"
-    | Ntdef (i,l) -> failwith "print_type: Ntdef not implemented yet";;
+  (* let make_se_list out x (n,ty) = *)
+  (*   if Str.string_match se_regexp x 0 then ( *)
+  (*     let i = Str.match_end () in *)
+  (*     if i <> String.length x then ( *)
+  (*       out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_idV_"; out (mfc x); out ")::" *)
+  (*     ) *)
+  (*   ) else ( *)
+  (*     out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_idV_"; out (mfc x); out ")::" *)
+  (*   );; *)
 
 
-  let print_cst out = function
-    | Heq ty -> out "(hol.Eq "; print_type out ty; out ")"
-    (* | Heps of ntype *)
-    | Hand -> out "hol.And"
-    | Hor  -> out "hol.Or"
-    | Hnot -> out "hol.Not"
-    | Himp -> out "hol.Imp"
-    | Htrue -> out "hol.True"
-    | Hfalse -> out "hol.False"
-    | Hforall ty -> out "(hol.Forall "; print_type out ty; out ")"
-    | Hexists ty -> out "(hol.Exists "; print_type out ty; out ")"
-    | _ -> failwith "error print_cst";;
+  (* let defV_ut = Hashtbl.create 17;; *)
 
-  let new_name =
-    let term_names = ref (-1)
-    in function () ->
-      incr term_names;
-      "y"^(string_of_int !term_names)
+  (* let make_sdt_parameter out x (_,ty,_) = *)
+  (*   if ((x <> "T") && (x <> "/\\") && (x <> "==>") && (x <> "!") && (x <> "?") && (x <> "\\/") && (x <> "F") && (x <> "~") && (x <> "_FALSITY_")) then ( *)
+  (*     try ( *)
+  (*       let y = Hashtbl.find ut x in *)
+  (*       Hashtbl.add defV_ut x y *)
+  (*     ) with | Not_found -> ( *)
+  (*       out "\nParameter "; out THEORY_NAME; out "_defV_"; out (mfc x); out " : tr_type tc tdt "; print_type out ty; out "." *)
+  (*     ) *)
+  (*   );; *)
 
-  let type_cst = function
-    | Heq ty -> Narrow (ty, Narrow (ty, Nbool))
-    (* | Heps of ntype *)
-    | Hand -> Narrow (Nbool, Narrow (Nbool, Nbool))
-    | Hor  -> Narrow (Nbool, Narrow (Nbool, Nbool))
-    | Hnot -> Narrow (Nbool, Nbool)
-    | Himp -> Narrow (Nbool, Narrow (Nbool, Nbool))
-    | Htrue -> Nbool
-    | Hfalse -> Nbool
-    | Hforall ty -> Narrow (Narrow (ty, Nbool), Nbool)
-    | Hexists ty -> Narrow (Narrow (ty, Nbool), Nbool)
-    | _ -> failwith "error type_cst"
+  (* let make_sdt_list out x (n,ty,_) = *)
+  (*   try ( *)
+  (*     let s = Hashtbl.find defV_ut x in *)
+  (*     out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " ("; out s; out "))::" *)
+  (*   ) with | Not_found -> ( *)
+  (*     if ((x <> "T") && (x <> "/\\") && (x <> "==>") && (x <> "!") && (x <> "?") && (x <> "\\/") && (x <> "F") && (x <> "~") && (x <> "_FALSITY_")) then ( *)
+  (*       out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_defV_"; out (mfc x); out ")::" *)
+  (*     ) *)
+  (*   );; *)
 
-  let rec type_of ldbr = function
-    | Ndbr i -> snd (List.nth ldbr i)
-    | Nvar (_, ty) ->
-        ty
-    | Ncst n ->
-        type_cst n
-    | Ndef _ -> failwith "Error type_of: no Ndef for the moment"
-    | Napp (t1, _) ->
-        (match type_of ldbr t1 with
-           | Narrow (_, ty) -> ty
-           | _ -> failwith "Error type_of: the type of the first term of an application should be an arrow type")
-    | Nabs (ty, t) ->
-        Narrow (ty, type_of (("",ty)::ldbr) t)
-
-  let rec print_term out ldbr = function
-    | Ndbr i -> out (fst (List.nth ldbr i))
-    | Nvar (i, ty) -> out "x"; out (string_of_int i)
-    | Ncst n -> print_cst out n
-    | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
-    | Napp (t1,t2) ->
-        (match type_of ldbr t1 with
-           | Narrow (ty1, ty2) ->
-               out "(hol.App "; print_type out ty1; out " "; print_type out ty2; out " "; print_term out ldbr t1; out " "; print_term out ldbr t2; out ")"
-           | _ -> failwith "Error print_term: the type of the first term of an application should be an arrow type")
-    | Nabs (ty,t) ->
-        let n = new_name () in
-	out "(hol.Lam "; print_type out ty; out " "; print_type out (type_of ((n,ty)::ldbr) t); out " ("; out n;
-	out ": hol.hterm "; print_type out ty; out " => "; print_term out ((n,ty)::ldbr) t; out "))";;
-
-  let print_term out = print_term out [];;
 
   (* for debugging only *)
   let rec dump_term = function
@@ -1937,6 +1914,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Pdef (s,ht,t) -> mk_const("TODO",[])
     | Ptyintro (ht,x,l,y,z,t) -> mk_const("TODO",[])
 
+
   let rec print_proof out = function
     | Proof (_, pc, _) -> print_proof_content out [] pc
 
@@ -1981,7 +1959,7 @@ module Proofobjects : Proofobject_primitives = struct
         let hyps' = apply_subst_to_hyps l hyps in
 	  print_proof_content out hyps' pc'
     | Pgen (p,x,ht) -> failwith "print_proof_content: Pgen rule not implemented yet"
-    | Psym p        -> failwith "print_proof_content: Psym rule not implemented yet"
+    | Psym p        -> out "(hol.sym _ _ _ "; print_proof_content out hyps (content_of p); out ")"
     | Ptrans (p1,p2) ->
         (* invariant : a = b && t = u *)
 	(*
@@ -2046,13 +2024,16 @@ module Proofobjects : Proofobject_primitives = struct
 	out "[]"; out s; out " --> "; print_term out t'; out "." *)
 	(* failwith "print_proof_content: Pdef rule not implemented yet" *)
     | Ptyintro (ht,x,l,y,z,t) -> failwith "print_proof_content: Ptyintro rule not implemented yet"
+  ;;
 
-  let export_thm out (name, p, concl) =
-    match concl with
-      | None -> failwith "The conclusion of a theorem should not be None."
-      | Some cl ->
-          out "\n\n"; out name; out " : hol.eps "; print_term out (term2nterm cl); out ".\n";
-          out "[] "; out name; out " --> "; print_proof out p; out ".";;
+
+  (* let export_thm out (name, p, concl) = *)
+  (*   match concl with *)
+  (*     | None -> failwith "The conclusion of a theorem should not be None." *)
+  (*     | Some cl -> *)
+  (*         out "\n\n"; out name; out " : hol.eps "; print_term out (term2nterm cl); out ".\n"; *)
+  (*         out "[] "; out name; out " --> "; print_proof out p; out ".";; *)
+
 
   (* Main function: list of proofs exportation *)
 
@@ -2077,7 +2058,7 @@ module Proofobjects : Proofobject_primitives = struct
     let l, total_thms = proof_of_thm [] 0 (proof_database ()) in
 
 
-    (* let count_thms = ref 0 in *)
+    let count_thms = ref 0 in
     (* let count_files = ref 1 in *)
 
     (* Main file *)
@@ -2130,10 +2111,11 @@ module Proofobjects : Proofobject_primitives = struct
     (*   out "(\*** This file has been automatically generated from HOL-Light source files. ***\)\n\nRequire Export "; out THEORY_NAME; out "_"; out (string_of_int (!count_files-1)); out ".\n\n" in *)
 
 
-    (* Coq files generation *)
+    (* Dedukti files generation *)
 
     let date1 = Unix.time () in
-    List.iter (export_thm out) l;
+    List.iter (make_dependencies out out out (fun () -> ()) count_thms path) l;
+    (* List.iter (export_thm out) l; *)
     let date2 = Unix.time () in
 
 
