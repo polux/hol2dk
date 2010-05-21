@@ -666,7 +666,7 @@ module Proofobjects : Proofobject_primitives = struct
 
   let rec print_term out ldbr = function
     | Ndbr i -> out (fst (List.nth ldbr i))
-    | Nvar (i, ty) -> out "x"; out (string_of_int i)
+    | Nvar (i, ty) -> out "variables.x"; out (string_of_int i)
     | Ncst n -> print_cst out n
     | Ndef _ -> failwith "Error print_term: no Ndef for the moment"
     | Napp (t1,t2) ->
@@ -1785,6 +1785,12 @@ module Proofobjects : Proofobject_primitives = struct
   (*     out "\n("; print_names out n; out ", existT (fun (t: type) => tr_type tc tdt t) "; print_type out ty; out " "; out THEORY_NAME; out "_idV_"; out (mfc x); out ")::" *)
   (*   );; *)
 
+  (* Generation of the term variables appearing in theorems *)
+
+  let out_idV out _ (n,ty) =
+    out "\nx"; out (string_of_int n); out " : hol.hterm ";
+    print_type out ty; out "."
+
 
   (* let defV_ut = Hashtbl.create 17;; *)
 
@@ -2077,7 +2083,7 @@ module Proofobjects : Proofobject_primitives = struct
     let file = open_out (Filename.concat path (THEORY_NAME^".dk")) in
     let count_file = ref 0 in
     let out s = (output_string file s; incr count_file; if !count_file = 1000 then (count_file := 0; flush file)) in
-    out ";*** This file has been automatically generated from HOL-Light source files. ***\n\n";
+    out ";*** This file has been automatically generated from HOL-Light source files. ***\n";
 
     (* let file = ref (open_out (Filename.concat path (THEORY_NAME^".dk"))) in *)
     (* let count_file = ref 0 in *)
@@ -2129,20 +2135,24 @@ module Proofobjects : Proofobject_primitives = struct
     (* List.iter (export_thm out) l; *)
     let date2 = Unix.time () in
 
-
     (* move_temp (); *) close_out file;
 
 
-    (* (\* Makefile *\) *)
+    (* Variables *)
 
-    (* let make = open_out (Filename.concat path "Makefile") in *)
-    (* let out = output_string make in *)
-    (* out "# This file has been automatically generated from HOL-Light source files.\n\nCOQ=ssrcoq\nFLAGS=-dont-load-proofs -dump-glob /dev/null -compile\n\nSRC="; *)
-    (* for i = 1 to !count_files do *)
-    (*   out " "; out THEORY_NAME; out "_"; out (string_of_int i); out ".v"; *)
-    (* done; *)
-    (* out "\nOBJ=$(SRC:.v=.vo)\nGLOB=$(SRC:.v=.glob)\n\n\nall: $(OBJ)\n\n\n%.vo: %.v\n\t$(COQ) $(FLAGS) $(^:.v=)\n\n\nclean:\n\trm -f $(OBJ) $(GLOB) *~"; *)
-    (* close_out make; *)
+    let variables = open_out (Filename.concat path "variables.dk") in
+    let out = output_string variables in
+    out ";*** This file has been automatically generated from HOL-Light source files. ***\n";
+    Hashtbl.iter (out_idV out) idV;
+    close_out variables;
+
+
+    (* Makefile *)
+
+    let make = open_out (Filename.concat path "Makefile") in
+    let out = output_string make in
+    out "# This file has been automatically generated from HOL-Light source files.\n\nSRC=hol.dko\nVAR=variables.dko\nHOL=hollight.dko\nSRCI=hol.dki\nVARI=variables.dki\n\n\nall: check_var check_hol\n\n\ncheck_var: $(SRCI) $(VAR) $(SRC)\n\tdkrun $(VAR) $(SRC)\n\n\ncheck_hol: $(SRCI) $(VARI) $(HOL) $(SRC) $(VAR)\n\tdkrun $(HOL) $(SRC) $(VAR)\n\n\n%.dki %.dko: %.dk\n\tdedukti $<\n\n\nclean:\n\trm -f *.dki *.dko";
+    close_out make;
 
 
     (* (\* Interpretation *\) *)
