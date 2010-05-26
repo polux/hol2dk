@@ -15,7 +15,7 @@ let (use_proofobjects, use_extended_proofobjects, use_coq) =
 let _ =
   if use_proofobjects then
     if use_coq then
-      loads "proofobjects_dedukti.ml"
+      loads "proofobjects_dedukti2.ml"
       (* loads "proofobjects_coq.ml" *)
     else
       loads "proofobjects_trt.ml"
