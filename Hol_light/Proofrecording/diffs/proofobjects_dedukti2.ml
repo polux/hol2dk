@@ -163,8 +163,8 @@ module Proofobjects : Proofobject_primitives = struct
 
   let proof_TRANS (p,q) =
     match (content_of p, content_of q) with
-      | (Prefl _,_) -> q
-      | (_, Prefl _) -> p
+      (* | (Prefl _,_) -> q *)
+      (* | (_, Prefl _) -> p *)
       | _ -> mk_proof (Ptrans (inc_references p, inc_references q));;
 
 
@@ -655,27 +655,30 @@ module Proofobjects : Proofobject_primitives = struct
     List.fold_left (fun u (i, ty) -> hforall i ty u) t fvt
 
 
-  (* (\* New expression of proofs *\) *)
+  (* New expression of proofs *)
 
-  (* type nproof = *)
-  (*   | Nprefl of nterm *)
-  (*   | Nptrans of nproof * nproof *)
-  (*   | Npabs of nproof * int * ntype *)
+  type nproof =
+    | Nprefl of nterm * ntype
+    | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
 
 
-  (* let rec proof2nproof p = *)
-  (*   match content_of p with *)
-  (*     | Prefl t -> *)
-  (*         let u = term2nterm t in *)
-  (*         let ty = type_of u in *)
-  (*         Nprefl u, heq ty u u *)
-  (*     | Ptrans (p1, p2) -> *)
-  (*         let (p'1, t1) = proof2nproof p1 in *)
-  (*         let (p'2, t2) = proof2nproof p2 in *)
-  (*         (match t1, t2 with *)
-  (*            | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> Nptrans (p'1, p'2), Napp (Napp (Ncst (Heq ty), u), w) *)
-  (*            | _, _ -> failwith "proof2nproof: rule trans incorrect") *)
-  (*     | _ -> failwith "proof2nproof: rule not implemented yet" *)
+  let proof2nproof p =
+
+    let rec proof2nproof p =
+      match content_of p with
+        | Prefl t ->
+            let u = term2nterm t in
+            let ty = type_of u in
+            Nprefl (u, ty), heq ty u u
+        | Ptrans (p1, p2) ->
+            let (p'1, t1) = proof2nproof p1 in
+            let (p'2, t2) = proof2nproof p2 in
+            (match t1, t2 with
+               | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> Nptrans (p'1, p'2, ty, u, v, w), heq ty u w
+               | _, _ -> failwith "proof2nproof: rule trans incorrect")
+        | _ -> failwith "proof2nproof: rule not implemented yet" in
+
+    fst (proof2nproof p)
 
 
   (* Pretty printers *)
@@ -717,12 +720,11 @@ module Proofobjects : Proofobject_primitives = struct
         out "))"
 
 
-  let rec print_proof out p =
-    match content_of p with
-      | Prefl t ->
-          let t' = term2nterm t in
-          let ty = type_of t' in
-          out "(hol.refl "; print_type out ty; out " "; print_term out t'; out ")"
+  let rec print_proof out = function
+    | Nprefl (t, ty) ->
+        out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
+    | Nptrans (p1, p2, ty, u, v, w) ->
+        out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof out p1; out " "; print_proof out p2; out ")"
       | _ -> failwith "print_proof: rule not implemented yet"
 
 
@@ -749,7 +751,7 @@ module Proofobjects : Proofobject_primitives = struct
              | [] -> ()
              | (x, ty)::q ->
                  out "[x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out "; x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; out "] ");
-          out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; out " --> "; print_proof out p; out "."
+          out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; out " --> "; print_proof out (proof2nproof p); out "."
       | _ -> failwith "export_thm: no conclusion"
 
 
@@ -785,7 +787,7 @@ module Proofobjects : Proofobject_primitives = struct
     close_out file;
 
     print_string "Generated "; print_int total_thms; print_string " theorems.\n";
-    print_string "Exportation duration: "; print_float (date2 -. date1); print_string "s.\n"
+    print_string "Exportation time: "; print_float (date2 -. date1); print_string "s.\n"
 
 
   (* Main function: all proofs exportation *)
