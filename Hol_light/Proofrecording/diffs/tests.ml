@@ -26,6 +26,13 @@ let test_abs = ABS `x:bool` test_trans
 let _ = save_thm "test_abs" test_abs
 
 
+(* Rule BETA *)
+
+let test_beta = BETA `(\x. \y. x <=> y) x`
+
+let _ = save_thm "test_beta" test_beta
+
+
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"]

@@ -661,6 +661,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Nprefl of nterm * ntype
     | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
     | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list
+    | Npbeta of ntype * ntype * int * nterm * nterm
     | Nfact of string
 
 
@@ -710,8 +711,9 @@ module Proofobjects : Proofobject_primitives = struct
         out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof out p1; out " "; print_proof out p2; out ")"
     | Npabs (typ, ty1, n, u, v, name, fvt) ->
         out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out "))"
+    | Npbeta (a, b, n, t, u) ->
+        out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
     | Nfact thm -> out thm
-    | _ -> failwith "print_proof: rule not implemented yet"
 
 
   (* Dealing with dependencies *)
@@ -756,14 +758,14 @@ module Proofobjects : Proofobject_primitives = struct
           let ty = type_of u in
           (Nprefl (u, ty), heq ty u u)
 
-      | Ptrans(p1,p2) ->
+      | Ptrans (p1,p2) ->
           let p'1, t1 = wp p1 in
           let p'2, t2 = wp p2 in
           (match t1, t2 with
              | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> (Nptrans (p'1, p'2, ty, u, v, w), heq ty u w)
              | _, _ -> failwith "make_dependencies_aux: wp': rule trans incorrect")
 
-      | Pabs(p,x,ty) ->
+      | Pabs (p,x,ty) ->
           let name = THEORY_NAME^"_"^(get_iname ()) in
           set_disk_info_of p THEORY_NAME name;
           Depgraph.Dep.add_thm dep_graph name;
@@ -776,6 +778,15 @@ module Proofobjects : Proofobject_primitives = struct
                  let n = make_idV x typ in
                  (Npabs (typ, ty1, n, u, v, name, fvt), heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
              | _ -> failwith "make_dependencies_aux: wp': rule abs incorrect")
+
+      | Pbeta (x, ty, t) ->
+          let typ = hol_type2ntype ty in
+          let n = make_idV x typ in
+          let t' = term2nterm t in
+          let ty2 = type_of t' in
+          let t2 = Nabs (n, typ, t') in
+          let t3 = Nvar (n, typ) in
+          (Npbeta (typ, ty2, n, t', t3), heq ty2 (Napp (t2, t3)) t')
 
       | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
