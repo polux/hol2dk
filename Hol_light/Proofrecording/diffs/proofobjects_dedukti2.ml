@@ -704,6 +704,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list
     | Npbeta of ntype * ntype * int * nterm * nterm
     | Npinst of string * (int * ntype) list * (int * ntype * nterm) list
+    | Npcomb of ntype * ntype * nterm * nterm * nterm * nterm * nproof * nproof
     | Nfact of string
 
 
@@ -748,17 +749,19 @@ module Proofobjects : Proofobject_primitives = struct
 
   let rec print_proof out = function
     | Nprefl (t, ty) ->
-        out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
+      out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
     | Nptrans (p1, p2, ty, u, v, w) ->
-        out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof out p1; out " "; print_proof out p2; out ")"
+      out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof out p1; out " "; print_proof out p2; out ")"
     | Npabs (typ, ty1, n, u, v, name, fvt) ->
-        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out "))"
+      out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out "))"
     | Npbeta (a, b, n, t, u) ->
-        out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
+      out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
     | Npinst (name, fvt, l') ->
-        out "("; out name; List.iter (fun (i, ty) ->
-                                        let t = subst_idv_aux i ty l' in
-                                        out " "; print_term out t) fvt; out ")"
+      out "("; out name; List.iter (fun (i, ty) ->
+        let t = subst_idv_aux i ty l' in
+        out " "; print_term out t) fvt; out ")"
+    | Npcomb (a, b, s, t, u, v, p'1, p'2) ->
+      out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof out p'1; out " "; print_proof out p'2; out ")"
     | Nfact thm -> out thm
 
 
@@ -846,6 +849,14 @@ module Proofobjects : Proofobject_primitives = struct
                                let t' = term2nterm t in
                                (make_idV s typ, typ, t')) l in
           (Npinst (name, fvt, l'), subst_idv t l')
+
+      | Pcomb (p1, p2) ->
+        let (p'1, t1) = wp p1 in
+        let (p'2, t2) = wp p2 in
+        (match (t1, t2) with
+          | Napp (Napp (Ncst (Heq (Narrow (a, b))), s), t), Napp (Napp (Ncst (Heq _), u), v) ->
+            (Npcomb (a, b, s, t, u, v, p'1, p'2), heq b (Napp (s, u)) (Napp (t, v)))
+          | _ -> failwith "make_dependencies_aux: wp': rule comb incorrect")
 
       | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
