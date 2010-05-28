@@ -652,7 +652,48 @@ module Proofobjects : Proofobject_primitives = struct
   (* Terms closure *)
 
   let close_term t fvt =
-    List.fold_left (fun u (i, ty) -> hforall i ty u) t fvt
+    List.fold_left (fun u (i, ty) -> hforall i ty u) t (List.rev fvt)
+
+
+  (* Substitutions *)
+
+  let remove_subst_idv x ty l =
+
+    let rec remove_subst_idv x ty acc = function
+      | [] -> acc
+      | ((i, typ, _) as t)::q ->
+          if x = i && ty = typ then
+            remove_subst_idv x ty acc q
+          else
+            remove_subst_idv x ty (t::acc) q in
+
+    remove_subst_idv x ty [] l
+
+
+  let rec subst_idv_aux i typ = function
+    | [] -> Nvar (i, typ)
+    | (n, ty, u)::q -> if i = n && typ = ty then u else
+        subst_idv_aux i typ q
+
+
+  (* let rec subst_idv t l = *)
+  (*   match t with *)
+  (*     | Nvar (i, typ) -> subst_idv_aux i typ l *)
+  (*     | Napp (u, v) -> Napp (subst_idv u l, subst_idv v l) *)
+  (*     | Nabs (x, ty, u) -> *)
+  (*         Nabs (x, ty, subst_idv u (remove_subst_idv x ty l)) *)
+  (*     | t -> t *)
+
+  let subst_idv t l =
+
+    let rec subst_idv t l k =
+      match t with
+        | Nvar (i, typ) -> k (subst_idv_aux i typ l)
+        | Napp (u, v) -> subst_idv u l (fun r -> subst_idv v l (fun r' -> k (Napp (r, r'))))
+        | Nabs (x, ty, u) -> subst_idv u (remove_subst_idv x ty l) (fun r -> k (Nabs (x, ty, r)))
+        | t -> k t in
+
+    subst_idv t l (fun x -> x)
 
 
   (* New expression of proofs *)
@@ -662,6 +703,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
     | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list
     | Npbeta of ntype * ntype * int * nterm * nterm
+    | Npinst of string * (int * ntype) list * (int * ntype * nterm) list
     | Nfact of string
 
 
@@ -713,6 +755,10 @@ module Proofobjects : Proofobject_primitives = struct
         out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out "))"
     | Npbeta (a, b, n, t, u) ->
         out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
+    | Npinst (name, fvt, l') ->
+        out "("; out name; List.iter (fun (i, ty) ->
+                                        let t = subst_idv_aux i ty l' in
+                                        out " "; print_term out t) fvt; out ")"
     | Nfact thm -> out thm
 
 
@@ -788,6 +834,19 @@ module Proofobjects : Proofobject_primitives = struct
           let t3 = Nvar (n, typ) in
           (Npbeta (typ, ty2, n, t', t3), heq ty2 (Napp (t2, t3)) t')
 
+      | Pinst (p, l) ->
+          let name = THEORY_NAME^"_"^(get_iname ()) in
+          set_disk_info_of p THEORY_NAME name;
+          Depgraph.Dep.add_thm dep_graph name;
+          let (p', t) = write_proof p in
+          Hashtbl.add proof_of_thm name (p', t);
+          let fvt = fv t in
+          let l' = List.map (fun (s, ty, t) ->
+                               let typ = hol_type2ntype ty in
+                               let t' = term2nterm t in
+                               (make_idV s typ, typ, t')) l in
+          (Npinst (name, fvt, l'), subst_idv t l')
+
       | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
     and wp p =
@@ -828,7 +887,7 @@ module Proofobjects : Proofobject_primitives = struct
     (match fvcl with
        | [] -> out "[] "
        | (x, ty)::q ->
-           out "[x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out "; x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; out "] ");
+           out "[x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out ", x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; out "] ");
     out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; out " --> "; print_proof out p; out "."
 
 
