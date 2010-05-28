@@ -660,25 +660,8 @@ module Proofobjects : Proofobject_primitives = struct
   type nproof =
     | Nprefl of nterm * ntype
     | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
-
-
-  let proof2nproof p =
-
-    let rec proof2nproof p =
-      match content_of p with
-        | Prefl t ->
-            let u = term2nterm t in
-            let ty = type_of u in
-            Nprefl (u, ty), heq ty u u
-        | Ptrans (p1, p2) ->
-            let (p'1, t1) = proof2nproof p1 in
-            let (p'2, t2) = proof2nproof p2 in
-            (match t1, t2 with
-               | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> Nptrans (p'1, p'2, ty, u, v, w), heq ty u w
-               | _, _ -> failwith "proof2nproof: rule trans incorrect")
-        | _ -> failwith "proof2nproof: rule not implemented yet" in
-
-    fst (proof2nproof p)
+    | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list
+    | Nfact of string
 
 
   (* Pretty printers *)
@@ -725,7 +708,171 @@ module Proofobjects : Proofobject_primitives = struct
         out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
     | Nptrans (p1, p2, ty, u, v, w) ->
         out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof out p1; out " "; print_proof out p2; out ")"
-      | _ -> failwith "print_proof: rule not implemented yet"
+    | Npabs (typ, ty1, n, u, v, name, fvt) ->
+        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out "))"
+    | Nfact thm -> out thm
+    | _ -> failwith "print_proof: rule not implemented yet"
+
+
+  (* Dealing with dependencies *)
+
+  let total = ref 0
+
+
+  let (* rec *) make_dependencies_aux dep_graph proof_of_thm (thmname, p, c_opt) = (* function *)
+    (* | [] -> () *)
+    (* | (thmname, p, c_opt)::il -> *)
+
+  let wdi thm =
+    Depgraph.Dep.add_dep dep_graph thm thmname;
+    Nfact thm in
+
+  let rec write_proof p =
+
+    incr total;
+
+    let rec share_info_of p = None
+      (* match content_of p with *)
+      (*   | Pabs (p, _, _) -> *)
+      (*       let name = THEORY_NAME^"_"^(get_iname ()) in *)
+      (*       set_disk_info_of p THEORY_NAME name; *)
+      (*       Depgraph.Dep.add_thm dep_graph name; *)
+      (*       Some(THEORY_NAME,name,(name,p,None)) *)
+      (*   | _ -> None *)
+            (* match (disk_info_of p) with *)
+            (*   | Some (thyname,thmname) -> Some(thyname,thmname,il) *)
+            (*   | None -> *)
+            (*       if do_share p then *)
+            (*         let name = THEORY_NAME^"_"^(get_iname ()) in *)
+            (*         set_disk_info_of p THEORY_NAME name; *)
+            (*         Depgraph.Dep.add_thm dep_graph name; *)
+            (*         Some(THEORY_NAME,name,(name,p,None)::il) *)
+            (*       else *)
+            (*         None *)
+
+    and wp' = function
+      | Prefl t ->
+          let u = term2nterm t in
+          let ty = type_of u in
+          (Nprefl (u, ty), heq ty u u)
+
+      | Ptrans(p1,p2) ->
+          let p'1, t1 = wp p1 in
+          let p'2, t2 = wp p2 in
+          (match t1, t2 with
+             | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> (Nptrans (p'1, p'2, ty, u, v, w), heq ty u w)
+             | _, _ -> failwith "make_dependencies_aux: wp': rule trans incorrect")
+
+      | Pabs(p,x,ty) ->
+          let name = THEORY_NAME^"_"^(get_iname ()) in
+          set_disk_info_of p THEORY_NAME name;
+          Depgraph.Dep.add_thm dep_graph name;
+          let (p', t) = write_proof p in
+          Hashtbl.add proof_of_thm name (p', t);
+          (match t with
+             | Napp (Napp (Ncst (Heq ty1), u), v) ->
+                 let fvt = fv t in
+                 let typ = hol_type2ntype ty in
+                 let n = make_idV x typ in
+                 (Npabs (typ, ty1, n, u, v, name, fvt), heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
+             | _ -> failwith "make_dependencies_aux: wp': rule abs incorrect")
+
+      | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
+
+    and wp p =
+      match share_info_of p with
+        | Some(_, thmname, (name, p, c_opt)) ->
+            let (p', t) = write_proof p in
+            set_disk_info_of p THEORY_NAME thmname;
+            Hashtbl.add proof_of_thm thmname (p', t);
+            wdi thmname, t
+        | None -> wp' (content_of p) in
+
+    wp' (content_of p) in
+
+          (* match disk_info_of p with *)
+          (*   | Some(_, thmname') -> *)
+          (*       if thmname' = thmname then *)
+          (*         wp' (content_of p) *)
+          (*       else *)
+          (*         let (a, b) = wdi thmname' in *)
+          (*         (a, b, il) *)
+          (*   | None -> wp' il (content_of p) in *)
+
+  let (p', t) = write_proof p in
+  Hashtbl.add proof_of_thm thmname (p', t)
+
+        (* let p', t, il = write_proof p il in *)
+        (* set_disk_info_of p THEORY_NAME thmname; *)
+        (* Hashtbl.add proof_of_thm thmname (p', t); *)
+        (* make_dependencies_aux dep_graph proof_of_thm il *)
+
+
+  (* Export one theorem *)
+
+  let export_thm out thmname cl p =
+    let fvcl = fv cl in
+    out "\n\n"; out thmname; out " : hol.eps ";
+    print_term out (close_term cl fvcl); out ".\n";
+    (match fvcl with
+       | [] -> out "[] "
+       | (x, ty)::q ->
+           out "[x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out "; x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; out "] ");
+    out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; out " --> "; print_proof out p; out "."
+
+
+  (* Export theorems with sharing *)
+
+  let make_dependencies out ((thmname, pr, _) as p) =
+
+    let dep_graph = Depgraph.Dep.create () in
+    let proof_of_thm = Hashtbl.create (references pr) in
+    Depgraph.Dep.add_thm dep_graph thmname;
+
+    make_dependencies_aux dep_graph proof_of_thm p;
+
+    Depgraph.Dep_top.iter_top (
+      fun thm ->
+        (try
+           let p, t = Hashtbl.find proof_of_thm thm in
+           export_thm out thm t p
+         with | Not_found -> failwith ("make_dependencies "^thm^": proof_of_thm not found\n"));
+    ) dep_graph
+
+
+  (* let proof2nproof p = *)
+
+  (*   let rec proof2nproof p = *)
+  (*     match content_of p with *)
+  (*       | Prefl t -> *)
+  (*           let u = term2nterm t in *)
+  (*           let ty = type_of u in *)
+  (*           [(Nprefl (u, ty), heq ty u u)] *)
+
+  (*       | Ptrans (p1, p2) -> *)
+  (*           let l1 = proof2nproof p1 in *)
+  (*           let (p'1, t1) = List.hd l1 in *)
+  (*           let l'1 = List.tl l1 *)
+
+  (*           let l2 = proof2nproof p2 in *)
+  (*           let (p'2, t2) = List.hd l2 in *)
+  (*           let l'2 = List.tl l2 in *)
+
+  (*           (match t1, t2 with *)
+  (*              | Napp (Napp (Ncst (Heq ty), u), v), Napp (Napp (Ncst (Heq _), _), w) -> (Nptrans (p'1, p'2, ty, u, v, w), heq ty u w)::(l'1@l'2) *)
+  (*              | _, _ -> failwith "proof2nproof: rule trans incorrect") *)
+
+  (*       | Pabs (p1, x, ty) -> *)
+  (*           let l = proof2nproof p1 in *)
+  (*           let (p', t) = List.hd l in *)
+  (*           let l' = List.tl l in *)
+
+  (*           match t with *)
+  (*             | Napp (Napp (Ncst (Heq ty2), u), v) ->  *)
+
+  (*       | _ -> failwith "proof2nproof: rule not implemented yet" in *)
+
+  (*   fst (proof2nproof p) *)
 
 
   (* Saving theorems *)
@@ -736,23 +883,6 @@ module Proofobjects : Proofobject_primitives = struct
 
   let save_proof name p c_opt =
     the_proof_database := (name, p, c_opt)::(!the_proof_database)
-
-
-  (* Export one theorem *)
-
-  let export_thm out (thmname, p, c_opt) =
-    match c_opt with
-      | Some cl' ->
-          let cl = term2nterm cl' in
-          let fvcl = fv cl in
-          out thmname; out " : hol.eps ";
-          print_term out (close_term cl fvcl); out ".\n";
-          (match fvcl with
-             | [] -> ()
-             | (x, ty)::q ->
-                 out "[x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out "; x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; out "] ");
-          out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; out " --> "; print_proof out (proof2nproof p); out "."
-      | _ -> failwith "export_thm: no conclusion"
 
 
   (* Main function: list of proofs exportation *)
@@ -781,7 +911,8 @@ module Proofobjects : Proofobject_primitives = struct
     out ";*** This file has been automatically generated from HOL-Light source files. ***\n";
 
     let date1 = Unix.time () in
-    List.iter (fun th -> out "\n\n"; export_thm out th) l;
+    (* List.iter (fun th -> out "\n\n"; export_thm out th) l; *)
+    List.iter (make_dependencies out) l;
     let date2 = Unix.time () in
 
     close_out file;

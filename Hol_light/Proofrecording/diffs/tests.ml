@@ -12,13 +12,20 @@ let _ = save_thm "test_refl" test_refl
 (* let _ = save_thm "test_sym" test_sym *)
 
 
-(* (\* Rule TRANS *\) *)
+(* Rule TRANS *)
 
-(* let test_trans = TRANS (SYM (REFL `x:bool`)) (SYM (REFL `x:bool`));; *)
+let test_trans = TRANS test_refl test_refl
 
-(* let _ = save_thm "test_trans" test_trans *)
+let _ = save_thm "test_trans" test_trans
+
+
+(* Rule ABS *)
+
+let test_abs = ABS `x:bool` test_trans
+
+let _ = save_thm "test_abs" test_abs
 
 
 (* Export *)
 
-let _ = export_list ["test_refl"(* ; "test_sym"; "test_trans" *)]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"]
