@@ -987,7 +987,7 @@ module Proofobjects : Proofobject_primitives = struct
 
     close_out file;
 
-    print_string "Generated "; print_int total_thms; print_string " theorems.\n";
+    print_string "Generated "; print_int !total; print_string " facts for "; print_int total_thms; print_string " theorems.\n";
     print_string "Exportation time: "; print_float (date2 -. date1); print_string "s.\n"
 
 

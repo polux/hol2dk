@@ -40,6 +40,13 @@ let test_inst = INST [(`(\y:bool. y) y:bool`, `x:bool`);(`u:bool`,`t:bool`)] (RE
 let _ = save_thm "test_inst" test_inst
 
 
+(* Mixing rules *)
+
+let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> u`))
+
+let _ = save_thm "test_mix" test_mix
+
+
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"]
