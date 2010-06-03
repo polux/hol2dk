@@ -47,6 +47,13 @@ let test_mk_comb = MK_COMB (REFL `\x:bool. x`, REFL `y:bool`)
 let _ = save_thm "test_mk_comb" test_mk_comb
 
 
+(* Rule ASSUME *)
+
+let test_assume = ASSUME `x:bool`
+
+let _ = save_thm "test_assume" test_assume
+
+
 (* Mixing rules *)
 
 let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> u`))
@@ -54,6 +61,16 @@ let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> 
 let _ = save_thm "test_mix" test_mix
 
 
+let test_mix2 = ABS `z:bool` (ASSUME `x <=> y`)
+
+let _ = save_thm "test_mix2" test_mix2
+
+
+let test_mix3 = INST [] test_mix2
+
+let _ = save_thm "test_mix3" test_mix3
+
+
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"]
