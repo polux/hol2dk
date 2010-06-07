@@ -61,6 +61,13 @@ let _ = save_thm "test_assume" test_assume
 (* let _ = save_thm "test_disch" test_disch *)
 
 
+(* Rule IMPAS *)
+
+(* let test_impas = IMP_ANTISYM_RULE (ASSUME `p ==> q`) (ASSUME `q ==> p`) *)
+
+(* let _ = save_thm "test_impas" test_impas *)
+
+
 (* Mixing rules *)
 
 let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> u`))
@@ -85,4 +92,4 @@ let _ = save_thm "test_mix3" test_mix3
 
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"(* ; "test_disch"; "test_mix4" *)]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"(* ; "test_disch"; "test_mix4" *)(* ; "test_impas" *)]

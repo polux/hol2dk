@@ -600,6 +600,7 @@ module Proofobjects : Proofobject_primitives = struct
   let hforall x ty t = Napp (Ncst (Hforall ty), Nabs (x, ty, t))
   let heq ty u v = Napp (Napp (Ncst (Heq ty), u), v)
   let himp u v = Napp (Napp (Ncst Himp, u), v)
+  let hequiv u v = Napp (Napp (Ncst (Heq Nbool), u), v)
 
 
   (* Functions on sorted unredundant lists *)
@@ -714,6 +715,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Npcomb of ntype * ntype * nterm * nterm * nterm * nterm * nproof * nproof
     | Nphyp of nterm
     | Npdisch of string * (int * ntype) list * nterm * int
+    | Npimpas of nterm * nterm * nproof * nproof
     | Nfact of string
 
 
@@ -776,6 +778,8 @@ module Proofobjects : Proofobject_primitives = struct
       | Nphyp t -> out (List.assoc t hyps)
       | Npdisch (name, fvt, t, pl) ->
         out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps); out ")"
+      | Npimpas (p, q, p1, p2) ->
+        out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof hyps p1; out " "; print_proof hyps p2; out ")"
       | Nfact thm -> out thm in
 
     print_proof hyps p
@@ -908,6 +912,14 @@ module Proofobjects : Proofobject_primitives = struct
       let t' = term2nterm t in
       let pl = try Context.place t' h with | Not_found -> -1 in
       (Npdisch (name, fvt, t', pl), Context.remove t' h, himp t' t2)
+
+    | Pimpas (p1, p2) ->
+      let (p'1, h1, t1) = wp p1 in
+      let (p'2, h2, t2) = wp p2 in
+      (match t1 with
+        | Napp (Napp (Ncst Himp, p), q) ->
+          (Npimpas (p, q, p'1, p'2), Context.union h1 h2, hequiv p q)
+        | _ -> failwith "make_dependencies_aux: wp': rule impas incorrect")
 
     | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
