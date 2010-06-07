@@ -5,7 +5,7 @@ let test_refl = REFL `x:bool`
 let _ = save_thm "test_refl" test_refl
 
 
-(* (\* Rule SYM *\) *)
+(* Rule SYM *)
 
 (* let test_sym = SYM (REFL `x:bool`);; *)
 
@@ -60,12 +60,35 @@ let _ = save_thm "test_assume" test_assume
 
 (* let _ = save_thm "test_disch" test_disch *)
 
+(* let test_disch2 = DISCH `p: bool` (REFL `q: bool`) *)
+
+(* let _ = save_thm "test_disch2" test_disch2 *)
+
+(* let test_disch3 = DISCH `q <=> q` (ASSUME `p: bool`) *)
+
+(* let _ = save_thm "test_disch3" test_disch3 *)
+
 
 (* Rule IMPAS *)
 
 (* let test_impas = IMP_ANTISYM_RULE (ASSUME `p ==> q`) (ASSUME `q ==> p`) *)
 
 (* let _ = save_thm "test_impas" test_impas *)
+
+(* let test_impas2 = IMP_ANTISYM_RULE test_disch2 test_disch3 *)
+
+(* let _ = save_thm "test_impas2" test_impas2 *)
+
+
+(* Rule DEDUCT_ANTISYM_RULE *)
+
+let test_dar = DEDUCT_ANTISYM_RULE (ASSUME `p:bool`) (REFL `q:bool`)
+
+let _ = save_thm "test_dar" test_dar
+
+let test_dar2 = DEDUCT_ANTISYM_RULE (ASSUME `p:bool`) (ASSUME `p:bool`)
+
+let _ = save_thm "test_dar2" test_dar2
 
 
 (* Mixing rules *)
@@ -92,4 +115,4 @@ let _ = save_thm "test_mix3" test_mix3
 
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"(* ; "test_disch"; "test_mix4" *)(* ; "test_impas" *)]
+let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"]

@@ -709,12 +709,12 @@ module Proofobjects : Proofobject_primitives = struct
   type nproof =
     | Nprefl of nterm * ntype
     | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
-    | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list
+    | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list * nterm list
     | Npbeta of ntype * ntype * int * nterm * nterm
-    | Npinst of string * (int * ntype) list * (int * ntype * nterm) list
+    | Npinst of string * (int * ntype) list * (int * ntype * nterm) list * nterm list
     | Npcomb of ntype * ntype * nterm * nterm * nterm * nterm * nproof * nproof
     | Nphyp of nterm
-    | Npdisch of string * (int * ntype) list * nterm * int
+    | Npdisch of string * (int * ntype) list * nterm * int * nterm list
     | Npimpas of nterm * nterm * nproof * nproof
     | Nfact of string
 
@@ -760,29 +760,30 @@ module Proofobjects : Proofobject_primitives = struct
 
   let print_proof out hyps p =
 
-    let rec print_proof hyps = function
+    let rec print_proof = function
       | Nprefl (t, ty) ->
         out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
       | Nptrans (p1, p2, ty, u, v, w) ->
-        out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof hyps p1; out " "; print_proof hyps p2; out ")"
-      | Npabs (typ, ty1, n, u, v, name, fvt) ->
-        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; List.iter (fun (_, n) -> out " "; out n) hyps; out "))"
+        out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof p1; out " "; print_proof p2; out ")"
+      | Npabs (typ, ty1, n, u, v, name, fvt, h) ->
+        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; List.iter (fun (_, n) -> out " "; out n) (List.filter (fun (t,_) -> List.mem t h) hyps); out "))"
       | Npbeta (a, b, n, t, u) ->
         out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
-      | Npinst (name, fvt, l') ->
+      | Npinst (name, fvt, l', h) ->
         out "("; out name; List.iter (fun (i, ty) ->
           let t = subst_idv_aux i ty l' in
-          out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) hyps; out ")"
+          out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) (List.filter (fun (t,_) -> List.mem t h) hyps); out ")"
       | Npcomb (a, b, s, t, u, v, p'1, p'2) ->
-        out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof hyps p'1; out " "; print_proof hyps p'2; out ")"
+        out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof p'1; out " "; print_proof p'2; out ")"
       | Nphyp t -> out (List.assoc t hyps)
-      | Npdisch (name, fvt, t, pl) ->
-        out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps); out ")"
+      | Npdisch (name, fvt, t, pl, h) ->
+        let hyps' = List.filter (fun (t,_) -> List.mem t h) hyps in
+        out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps' = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps'); out ")"
       | Npimpas (p, q, p1, p2) ->
-        out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof hyps p1; out " "; print_proof hyps p2; out ")"
+        out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
       | Nfact thm -> out thm in
 
-    print_proof hyps p
+    print_proof p
 
 
   (* Contexts : sets of nterms *)
@@ -865,7 +866,7 @@ module Proofobjects : Proofobject_primitives = struct
           let fvt = fv t in
           let typ = hol_type2ntype ty in
           let n = make_idV x typ in
-          (Npabs (typ, ty1, n, u, v, name, fvt), h, heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
+          (Npabs (typ, ty1, n, u, v, name, fvt, Context.elements h), h, heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
         | _ -> failwith "make_dependencies_aux: wp': rule abs incorrect")
 
     | Pbeta (x, ty, t) ->
@@ -888,7 +889,7 @@ module Proofobjects : Proofobject_primitives = struct
         let typ = hol_type2ntype ty in
         let t' = term2nterm t in
         (make_idV s typ, typ, t')) l in
-      (Npinst (name, fvt, l'), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
+      (Npinst (name, fvt, l', Context.elements h), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
 
     | Pcomb (p1, p2) ->
       let (p'1, h1, t1) = wp p1 in
@@ -911,7 +912,7 @@ module Proofobjects : Proofobject_primitives = struct
       let fvt = fv t2 in
       let t' = term2nterm t in
       let pl = try Context.place t' h with | Not_found -> -1 in
-      (Npdisch (name, fvt, t', pl), Context.remove t' h, himp t' t2)
+      (Npdisch (name, fvt, t', pl, Context.elements h), Context.remove t' h, himp t' t2)
 
     | Pimpas (p1, p2) ->
       let (p'1, h1, t1) = wp p1 in
