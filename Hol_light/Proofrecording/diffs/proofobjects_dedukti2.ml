@@ -713,7 +713,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Npinst of string * (int * ntype) list * (int * ntype * nterm) list
     | Npcomb of ntype * ntype * nterm * nterm * nterm * nterm * nproof * nproof
     | Nphyp of nterm
-    (* | Npdisch of nproof * nterm *)
+    | Npdisch of string * (int * ntype) list * nterm * int
     | Nfact of string
 
 
@@ -774,7 +774,8 @@ module Proofobjects : Proofobject_primitives = struct
       | Npcomb (a, b, s, t, u, v, p'1, p'2) ->
         out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof hyps p'1; out " "; print_proof hyps p'2; out ")"
       | Nphyp t -> out (List.assoc t hyps)
-      (* | Npdisch of nproof * nterm *)
+      | Npdisch (name, fvt, t, pl) ->
+        out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps); out ")"
       | Nfact thm -> out thm in
 
     print_proof hyps p
@@ -790,6 +791,12 @@ module Proofobjects : Proofobject_primitives = struct
   module Context = struct
     include Set.Make(Nterm)
     let map f s = fold (fun e res -> add (f e) res) s empty
+    let place e s =
+      let rec place i = function
+        | [] -> raise Not_found
+        | a::_ when Nterm.compare a e = 0 -> i
+        | _::q -> place (i+1) q in
+      place 0 (elements s)
   end
 
 
@@ -891,10 +898,16 @@ module Proofobjects : Proofobject_primitives = struct
       let t' = term2nterm t in
       (Nphyp t', Context.singleton t', t')
 
-    (* | Pdisch (p, t) -> *)
-    (*   let (p1, t1) = wp p in *)
-    (*   let t' = term2nterm t in *)
-    (*   (Npdisch (p1, t'), himp t' t1) *)
+    | Pdisch (p, t) ->
+      let name = THEORY_NAME^"_"^(get_iname ()) in
+      set_disk_info_of p THEORY_NAME name;
+      Depgraph.Dep.add_thm dep_graph name;
+      let (p', h, t2) = write_proof p in
+      Hashtbl.add proof_of_thm name (p', h, t2);
+      let fvt = fv t2 in
+      let t' = term2nterm t in
+      let pl = try Context.place t' h with | Not_found -> -1 in
+      (Npdisch (name, fvt, t', pl), Context.remove t' h, himp t' t2)
 
     | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 

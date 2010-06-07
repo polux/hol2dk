@@ -54,6 +54,13 @@ let test_assume = ASSUME `x:bool`
 let _ = save_thm "test_assume" test_assume
 
 
+(* Rule DISCH *)
+
+(* let test_disch = DISCH `x:bool` test_assume *)
+
+(* let _ = save_thm "test_disch" test_disch *)
+
+
 (* Mixing rules *)
 
 let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> u`))
@@ -71,6 +78,11 @@ let test_mix3 = INST [] test_mix2
 let _ = save_thm "test_mix3" test_mix3
 
 
+(* let test_mix4 = DISCH `x <=> y` test_mix3 *)
+
+(* let _ = save_thm "test_mix4" test_mix4 *)
+
+
 (* Export *)
 
-let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"]
+let _ = export_list ["test_refl"; (* "test_sym"; *) "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"(* ; "test_disch"; "test_mix4" *)]
