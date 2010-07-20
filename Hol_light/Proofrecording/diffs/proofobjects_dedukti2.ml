@@ -636,25 +636,42 @@ module Proofobjects : Proofobject_primitives = struct
       List.fold_left (fun res a -> insert a res) l2 l1
 
 
-  (* Free variables of a term *)
+  (* Free variables (both of types and terms) of a term *)
 
   let fv =
 
-    (* let rec fv = function *)
-    (*   | Nvar (i, ty) -> [(i, ty)] *)
-    (*   | Ncst _ -> [] *)
-    (*   | Ndef _ -> [] *)
-    (*   | Napp (u, v) -> fusion (fv u) (fv v) *)
-    (*   | Nabs (i, ty, v) -> remove (i, ty) (fv v) in *)
+    let rec fV = function
+      | Ntvar i -> [i]
+      | Narrow (u,v) -> fusion (fV u) (fV v)
+      | Ntdef (_,l) -> List.fold_left (fun res e -> fusion (fV e) res) [] l
+      | _ -> [] in
 
-    let rec fv k = function
-      | Nvar (i, ty) -> k [(i, ty)]
-      | Ncst _ -> k []
-      | Ndef _ -> k []
-      | Napp (u, v) -> fv (fun r1 -> fv (fun r2 -> k (fusion r1 r2)) u) v
-      | Nabs (i, ty, v) -> fv (fun r -> k (remove (i, ty) r)) v in
+    let fvcst = function
+      | Heq ty | Heps ty | Hforall ty | Hexists ty -> fV ty
+      | _ -> [] in
 
-    fv (fun x -> x)
+    let rec fv = function
+      | Nvar (i, ty) -> [(i, ty)], fV ty
+      | Ncst c -> [], fvcst c
+      | Ndef (_,ty) -> [], fV ty
+      | Napp (u, v) ->
+        let fvu, fVu = fv u in
+        let fvv, fVv = fv v in
+        fusion (fvu) (fvv), fusion fVu fVv
+      | Nabs (i, ty, v) ->
+        let fvv, fVv = fv v in
+        remove (i, ty) (fvv), fusion (fV ty) fVv in
+
+    (* let rec fv k = function *)
+    (*   | Nvar (i, ty) -> k [(i, ty)] *)
+    (*   | Ncst _ -> k [] *)
+    (*   | Ndef _ -> k [] *)
+    (*   | Napp (u, v) -> fv (fun r1 -> fv (fun r2 -> k (fusion r1 r2)) u) v *)
+    (*   | Nabs (i, ty, v) -> fv (fun r -> k (remove (i, ty) r)) v in *)
+
+    (* fv (fun x -> x) *)
+
+    fv
 
 
   (* Terms closure *)
@@ -704,17 +721,47 @@ module Proofobjects : Proofobject_primitives = struct
     subst_idv t l (fun x -> x)
 
 
+  let rec subst_idt_aux v = function
+    | [] -> Ntvar v
+    | (n, ty)::q -> if v = n then ty else subst_idt_aux v q
+
+  let rec subst_idt_type l = function
+    | Ntvar i -> subst_idt_aux i l
+    | Narrow (a,b) -> Narrow (subst_idt_type l a, subst_idt_type l b)
+    | Ntdef (i, l') -> Ntdef (i, List.map (subst_idt_type l) l')
+    | ty -> ty
+
+  let subst_idt_cst l = function
+    | Heq ty -> Heq (subst_idt_type l ty)
+    | Heps ty -> Heps (subst_idt_type l ty)
+    | Hforall ty -> Hforall (subst_idt_type l ty)
+    | Hexists ty -> Hexists (subst_idt_type l ty)
+    | c -> c
+
+  let subst_idt t l =
+
+    let rec subst_idt = function
+      | Nvar (i, ty) -> Nvar (i, subst_idt_type l ty)
+      | Ncst c -> Ncst (subst_idt_cst l c)
+      | Ndef (i, ty) -> Ndef (i, subst_idt_type l ty)
+      | Napp (u,v) -> Napp (subst_idt u, subst_idt v)
+      | Nabs (i, ty, t) -> Nabs (i, subst_idt_type l ty, subst_idt t) in
+
+    subst_idt t
+
+
   (* New expression of proofs *)
 
   type nproof =
     | Nprefl of nterm * ntype
     | Nptrans of nproof * nproof * ntype * nterm * nterm * nterm
-    | Npabs of ntype * ntype * int * nterm * nterm * string * (int * ntype) list * nterm list
+    | Npabs of ntype * ntype * int * nterm * nterm * string * (((int * ntype) list) * (int list)) * nterm list
     | Npbeta of ntype * ntype * int * nterm * nterm
-    | Npinst of string * (int * ntype) list * (int * ntype * nterm) list * nterm list
+    | Npinst of string * (((int * ntype) list) * (int list)) * (int * ntype * nterm) list * nterm list
+    | Npinstt of string * (((int * ntype) list) * (int list)) * (int * ntype) list * nterm list
     | Npcomb of ntype * ntype * nterm * nterm * nterm * nterm * nproof * nproof
     | Nphyp of nterm
-    | Npdisch of string * (int * ntype) list * nterm * int * nterm list
+    | Npdisch of string * (((int * ntype) list) * (int list)) * nterm * int * nterm list
     | Npimpas of nterm * nterm * nproof * nproof
     | Npeqmp of nterm * nterm * nproof * nproof
     | Nfact of string
@@ -723,7 +770,7 @@ module Proofobjects : Proofobject_primitives = struct
   (* Pretty printers *)
 
   let rec print_type out = function
-    | Ntvar i -> out "T_"; out (string_of_int i)
+    | Ntvar i -> out "X"; out (string_of_int i)
     | Nbool -> out "hol.o"
     | Narrow (a,b) -> out "(hol.arrow "; print_type out a; out " "; print_type out b; out ")"
     | Ntdef (i,l) -> failwith "print_type: Ntdef not implemented yet"
@@ -766,20 +813,30 @@ module Proofobjects : Proofobject_primitives = struct
         out "(hol.refl "; print_type out ty; out " "; print_term out t; out ")"
       | Nptrans (p1, p2, ty, u, v, w) ->
         out "(hol.trans "; print_type out ty; out " "; print_term out u; out " "; print_term out v; out " "; print_term out w; out " "; print_proof p1; out " "; print_proof p2; out ")"
-      | Npabs (typ, ty1, n, u, v, name, fvt, h) ->
-        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; List.iter (fun (_, n) -> out " "; out n) (List.filter (fun (t,_) -> List.mem t h) hyps); out "))"
+      | Npabs (typ, ty1, n, u, v, name, fvall, h) ->
+        let (fvt, fVt) = fvall in
+        out "(hol.fun_ext "; print_type out typ; out " "; print_type out ty1; out " "; print_term out (Nabs (n, typ, u)); out " "; print_term out (Nabs (n, typ, v)); out " "; out "(x"; out (string_of_int n); out ": hol.hterm "; print_type out typ; out " => "; out name; List.iter (fun i -> out " X"; out (string_of_int i)) fVt; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; List.iter (fun (_, n) -> out " "; out n) (List.filter (fun (t,_) -> List.mem t h) hyps); out "))"
       | Npbeta (a, b, n, t, u) ->
         out "(hol.beta "; print_type out a; out " "; print_type out b; out " (x"; out (string_of_int n); out ": hol.hterm "; print_type out a; out " => "; print_term out t; out ") "; print_term out u; out ")"
-      | Npinst (name, fvt, l', h) ->
-        out "("; out name; List.iter (fun (i, ty) ->
-          let t = subst_idv_aux i ty l' in
-          out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) ((* List.filter (fun (t,_) -> List.mem t h) *) hyps); out ")"
+      | Npinst (name, fvall, l', h) ->
+        let (fvt, fVt) = fvall in
+        out "("; out name; List.iter (fun i ->
+          out " X"; out (string_of_int i)) fVt; List.iter (fun (i, ty) ->
+            let t = subst_idv_aux i ty l' in
+            out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) ((* List.filter (fun (t,_) -> List.mem t h) *) hyps); out ")"
+      | Npinstt (name, fvall, l', h) ->
+        let (fvt, fVt) = fvall in
+        out "("; out name; List.iter (fun i ->
+          let t = subst_idt_aux i l' in
+          out " "; print_type out t) fVt; List.iter (fun (i, _) ->
+            out " x"; out (string_of_int i)) fvt; List.iter (fun (_, n) -> out " "; out n) ((* List.filter (fun (t,_) -> List.mem t h) *) hyps); out ")"
       | Npcomb (a, b, s, t, u, v, p'1, p'2) ->
         out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof p'1; out " "; print_proof p'2; out ")"
       | Nphyp t -> out (List.assoc t hyps)
-      | Npdisch (name, fvt, t, pl, h) ->
+      | Npdisch (name, fvall, t, pl, h) ->
+        let (fvt, fVt) = fvall in
         let hyps' = List.filter (fun (t,_) -> List.mem t h) hyps in
-        out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps' = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps'); out ")"
+        out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun i -> out " X"; out (string_of_int i)) fVt; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps' = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps'); out ")"
       | Npimpas (p, q, p1, p2) ->
         out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
       | Npeqmp (p, q, p1, p2) ->
@@ -787,6 +844,20 @@ module Proofobjects : Proofobject_primitives = struct
       | Nfact thm -> out thm in
 
     print_proof p
+
+
+  (* Facilities *)
+
+  let heq a t u = Napp (Napp (Ncst (Heq a), t), u);;
+  let hequiv t u = Napp (Napp (Ncst (Heq Nbool), t), u);;
+  let himp t u = Napp (Napp (Ncst Himp, t), u);;
+  let hand t u = Napp (Napp (Ncst Hand, t), u);;
+  let hor t u = Napp (Napp (Ncst Hor, t), u);;
+  let hnot t = Napp (Ncst Hnot, t);;
+  let htrue = Ncst Htrue;;
+  let hfalse = Ncst Hfalse;;
+  let hforall x a p = Napp (Ncst (Hforall a), Nabs (x, a, p));;
+  let hexists x a p = Napp (Ncst (Hexists a), Nabs (x, a, p));;
 
 
   (* Contexts : sets of nterms *)
@@ -867,7 +938,9 @@ module Proofobjects : Proofobject_primitives = struct
       (match t with
         | Napp (Napp (Ncst (Heq ty1), u), v) ->
           let fvt = fv t in
-          let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
+          let fvall = Context.fold (fun t' (res, rEs) ->
+            let (fvt', fVt') = fv t' in
+            (fusion fvt' res, fusion fVt' rEs)) h fvt in
           let typ = hol_type2ntype ty in
           let n = make_idV x typ in
           (Npabs (typ, ty1, n, u, v, name, (* fvt *) fvall, Context.elements h), h, heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
@@ -889,12 +962,31 @@ module Proofobjects : Proofobject_primitives = struct
       let (p', h, t) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t);
       let fvt = fv t in
-      let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
+      let fvall = Context.fold (fun t' (res, rEs) ->
+        let (fvt', fVt') = fv t' in
+        (fusion fvt' res, fusion fVt' rEs)) h fvt in
+      (* let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in *)
       let l' = List.map (fun (s, ty, t) ->
         let typ = hol_type2ntype ty in
         let t' = term2nterm t in
         (make_idV s typ, typ, t')) l in
       (Npinst (name, (* fvt *) fvall, l', Context.elements h), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
+
+    | Pinstt (p, l) ->
+      let name = THEORY_NAME^"_"^(get_iname ()) in
+      set_disk_info_of p THEORY_NAME name;
+      Depgraph.Dep.add_thm dep_graph name;
+      let (p', h, t) = write_proof p in
+      Hashtbl.add proof_of_thm name (p', h, t);
+      let fvt = fv t in
+      let fvall = Context.fold (fun t' (res, rEs) ->
+        let (fvt', fVt') = fv t' in
+        (fusion fvt' res, fusion fVt' rEs)) h fvt in
+      (* let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in *)
+      let l' = List.map (fun (s, ty) ->
+        let typ = hol_type2ntype ty in
+        (make_idT s, typ)) l in
+      (Npinstt (name, fvall, l', Context.elements h), Context.map (fun t2 -> subst_idt t2 l') h, subst_idt t l')
 
     | Pcomb (p1, p2) ->
       let (p'1, h1, t1) = wp p1 in
@@ -915,7 +1007,10 @@ module Proofobjects : Proofobject_primitives = struct
       let (p', h, t2) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t2);
       let fvt = fv t2 in
-      let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
+      let fvall = Context.fold (fun t' (res, rEs) ->
+        let (fvt', fVt') = fv t' in
+        (fusion fvt' res, fusion fVt' rEs)) h fvt in
+      (* let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in *)
       let t' = term2nterm t in
       let pl = try Context.place t' h with | Not_found -> -1 in
       (Npdisch (name, (* fvt *) fvall, t', pl, Context.elements h), Context.remove t' h, himp t' t2)
@@ -935,6 +1030,44 @@ module Proofobjects : Proofobject_primitives = struct
         | Napp (Napp (Ncst (Heq _), p), q) ->
           (Npeqmp (p, q, p'1, p'2), Context.union h1 h2, q)
         | _ -> failwith "make_dependencies_aux: wp': rule eq_mp incorrect")
+
+    | Pdef (name, ty, tm) ->
+      (match name with
+        | "T" ->
+          (Nfact (THEORY_NAME^"_DEF_T"), Context.empty, hequiv htrue (term2nterm tm))
+        | "/\\" ->
+          let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hand) (term2nterm tm) in
+          (Nfact (THEORY_NAME^"_DEF__slash__backslash_"), Context.empty, tm)
+        | "==>" ->
+          let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Himp) (term2nterm tm) in
+          (Nfact (THEORY_NAME^"_DEF__equal__equal__greaterthan_"), Context.empty, tm)
+        | "!" ->
+          let a2 = hol_type2ntype ty in
+          (match a2 with
+            | Narrow (Narrow (b, _), _) ->
+              let tm = heq a2 (Ncst (Hforall b)) (term2nterm tm) in
+              (Nfact (THEORY_NAME^"_DEF__exclamationmark_"), Context.empty, tm)
+            | _ -> failwith "make_dependencies_aux: wp': definition of ! incorrect")
+        | "?" ->
+          let a2 = hol_type2ntype ty in
+          (match a2 with
+            | Narrow (Narrow (b, _), _) ->
+              let tm = heq a2 (Ncst (Hexists b)) (term2nterm tm) in
+              (Nfact (THEORY_NAME^"_DEF__questionmark_"), Context.empty, tm)
+            | _ -> failwith "make_dependencies_aux: wp': definition of ? incorrect")
+        | "\\/" ->
+          let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hor) (term2nterm tm) in
+          (Nfact (THEORY_NAME^"_DEF__backslash__slash_"), Context.empty, tm)
+        | "F" ->
+          let tm = hequiv (Ncst Hfalse) (term2nterm tm) in
+          (Nfact (THEORY_NAME^"_DEF_F"), Context.empty, tm)
+        | "~" ->
+          let tm = heq (Narrow (Nbool, Nbool)) (Ncst Hnot) (term2nterm tm) in
+          (Nfact (THEORY_NAME^"_DEF__tilde_"), Context.empty, tm)
+        | "_FALSITY_" ->
+          let tm = heq Nbool (Ncst Hfalse) (Ncst Hfalse) in
+          (Nprefl (Ncst Hfalse, Nbool), Context.empty, tm)
+        | _ -> failwith "make_dependencies_aux: wp': term definition not implemented yet")
 
     | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
@@ -970,36 +1103,72 @@ module Proofobjects : Proofobject_primitives = struct
 
   let export_thm out thmname hyps cl p =
     let fvcl = fv cl in
-    let fvall = Context.fold (fun t res -> fusion (fv t) res) hyps fvcl in
-    out "\n\n"; out thmname; out " : hol.eps ";
+    let fvall = Context.fold (fun t' (res, rEs) ->
+      let (fvt', fVt') = fv t' in
+      (fusion fvt' res, fusion fVt' rEs)) hyps fvcl in
+    (* let fvall = Context.fold (fun t res -> fusion (fv t) res) hyps fvcl in *)
+    let fvall, fVall = fvall in
+    out "\n\n"; out thmname; out " : ";
+    List.iter (fun i -> out "X"; out (string_of_int i); out ": hol.htype -> ") fVall;
+    out "hol.eps ";
     let t = Context.fold (fun t res -> himp t res) hyps cl in
     print_term out (close_term t (* fvcl *) fvall); out ".\n";
     out "[";
     let ass =
-      (match (* fvcl *) fvall with
+      (match fVall with
         | [] ->
-          (try
-             let a = Context.min_elt hyps in
-             let n = new_name () in
-             out n; out ": hol.hterm "; print_term out a;
-             Context.fold (fun b acc ->
-               let m = new_name () in
-               out ", "; out m; out ": hol.eps "; print_term out b;
-               (b,m)::acc) (Context.remove a hyps) [(a,n)]
-           with | Not_found -> [])
-        | (x, ty)::q ->
-          out "x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out ", x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q;
+          (match (* fvcl *) fvall with
+            | [] ->
+              (try
+                 let a = Context.min_elt hyps in
+                 let n = new_name () in
+                 out n; out ": hol.hterm "; print_term out a;
+                 Context.fold (fun b acc ->
+                   let m = new_name () in
+                   out ", "; out m; out ": hol.eps "; print_term out b;
+                   (b,m)::acc) (Context.remove a hyps) [(a,n)]
+               with | Not_found -> [])
+            | (x, ty)::q ->
+              out "x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out ", x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q;
+              Context.fold (fun b acc ->
+                let m = new_name () in
+                out ", "; out m; out ": hol.eps "; print_term out b;
+                (b,m)::acc) hyps [])
+        | i::q ->
+          out "X"; out (string_of_int i); out ": hol.htype "; List.iter (fun j -> out ", X"; out (string_of_int j); out ": hol.htype") q;
+          List.iter (fun (n, typ) -> out ", x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) fvall;
           Context.fold (fun b acc ->
             let m = new_name () in
             out ", "; out m; out ": hol.eps "; print_term out b;
             (b,m)::acc) hyps []) in
+    (* let ass = *)
+    (*   (match (\* fvcl *\) fvall with *)
+    (*     | [] -> *)
+    (*       (try *)
+    (*          let a = Context.min_elt hyps in *)
+    (*          let n = new_name () in *)
+    (*          out n; out ": hol.hterm "; print_term out a; *)
+    (*          Context.fold (fun b acc -> *)
+    (*            let m = new_name () in *)
+    (*            out ", "; out m; out ": hol.eps "; print_term out b; *)
+    (*            (b,m)::acc) (Context.remove a hyps) [(a,n)] *)
+    (*        with | Not_found -> []) *)
+    (*     | (x, ty)::q -> *)
+    (*       out "x"; out (string_of_int x); out ": hol.hterm "; print_type out ty; List.iter (fun (n, typ) -> out ", x"; out (string_of_int n); out ": hol.hterm "; print_type out typ) q; *)
+    (*       Context.fold (fun b acc -> *)
+    (*         let m = new_name () in *)
+    (*         out ", "; out m; out ": hol.eps "; print_term out b; *)
+    (*         (b,m)::acc) hyps []) in *)
     out "] ";
-    out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) (* fvcl *) fvall; List.iter (fun (_, n) -> out " "; out n) ass; out " --> "; print_proof out ass p; out "."
+    out thmname; List.iter (fun i -> out " X"; out (string_of_int i)) fVall; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) (* fvcl *) fvall; List.iter (fun (_, n) -> out " "; out n) ass; out " --> "; print_proof out ass p; out "."
+    (* out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) (\* fvcl *\) fvall; List.iter (fun (_, n) -> out " "; out n) ass; out " --> "; print_proof out ass p; out "." *)
 
 
   (* Export theorems with sharing *)
 
   let make_dependencies out ((thmname, pr, _) as p) =
+
+    print_endline thmname;
 
     let dep_graph = Depgraph.Dep.create () in
     let proof_of_thm = Hashtbl.create (references pr) in
@@ -1007,13 +1176,24 @@ module Proofobjects : Proofobject_primitives = struct
 
     make_dependencies_aux dep_graph proof_of_thm p;
 
-    Depgraph.Dep_top.iter_top (
-      fun thm ->
-        (try
-           let p, h, t = Hashtbl.find proof_of_thm thm in
-           export_thm out thm h t p
-         with | Not_found -> failwith ("make_dependencies "^thm^": proof_of_thm not found\n"));
-    ) dep_graph
+    if
+      (thmname <> (THEORY_NAME^"_DEF_T")) &&
+        (thmname <> (THEORY_NAME^"_DEF__slash__backslash_")) &&
+        (thmname <> (THEORY_NAME^"_DEF__equal__equal__greaterthan_")) &&
+        (thmname <> (THEORY_NAME^"_DEF__exclamationmark_")) &&
+        (thmname <> (THEORY_NAME^"_DEF__questionmark_")) &&
+        (thmname <> (THEORY_NAME^"_DEF__backslash__slash_")) &&
+        (thmname <> (THEORY_NAME^"_DEF_F"))&&
+        (thmname <> (THEORY_NAME^"_DEF__tilde_"))
+    then (
+      Depgraph.Dep_top.iter_top (
+        fun thm ->
+          (try
+               let p, h, t = Hashtbl.find proof_of_thm thm in
+               export_thm out thm h t p
+           with | Not_found -> failwith ("make_dependencies "^thm^": proof_of_thm not found\n"));
+      ) dep_graph
+    )
 
 
   (* let proof2nproof p = *)

@@ -124,6 +124,22 @@ let test_mix5 = INST [(`p ==> p`,`y:bool`)] (EQ_MP (ASSUME `x <=> y`) (ASSUME `x
 let _ = save_thm "test_mix5" test_mix5
 
 
+(* Type variables *)
+
+let test_tyvar = REFL `x:A`
+let test_tyvar2 = INST [(`y:A`,`x:A`)] (REFL `x:A`)
+
+let _ = save_thm "test_tyvar" test_tyvar
+let _ = save_thm "test_tyvar2" test_tyvar2
+
+
+(* Rule INSTT *)
+
+let test_instt = INST_TYPE [(mk_type ("fun", [mk_type ("bool", []); mk_type ("bool", [])]), mk_vartype "A")] (REFL `x:A`)
+
+let _ = save_thm "test_instt" test_instt
+
+
 (* Export *)
 
-let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"; "test_eqmp"; "test_mix5"]
+let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"; "test_eqmp"; "test_mix5"; "test_tyvar"; "test_tyvar2"; "test_instt"]

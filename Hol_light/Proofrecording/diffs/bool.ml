@@ -433,19 +433,19 @@ let CONTR =
 (* Rules for unique existence.                                               *)
 (* ------------------------------------------------------------------------- *)
 
-let EXISTS_UNIQUE_DEF = new_basic_definition
- `(?!) = \P:A->bool. ((?) P) /\ (!x y. P x /\ P y ==> x = y)`;;
+(* let EXISTS_UNIQUE_DEF = new_basic_definition *)
+(*  `(?!) = \P:A->bool. ((?) P) /\ (!x y. P x /\ P y ==> x = y)`;; *)
 
-let mk_uexists = mk_binder "?!";;
+(* let mk_uexists = mk_binder "?!";; *)
 
-let EXISTENCE =
-  let P = `P:A->bool` in
-  let pth =
-    let th1 = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM EXISTS_UNIQUE_DEF P) in
-    let th2 = UNDISCH (fst(EQ_IMP_RULE th1)) in
-    DISCH_ALL (CONJUNCT1 th2) in
-  fun th ->
-    try let abs = rand(concl th) in
-        let ty = snd(dest_var(bndvar abs)) in
-        MP (PINST [ty,aty] [abs,P] pth) th
-    with Failure _ -> failwith "EXISTENCE";;
+(* let EXISTENCE = *)
+(*   let P = `P:A->bool` in *)
+(*   let pth = *)
+(*     let th1 = CONV_RULE (RAND_CONV BETA_CONV) (AP_THM EXISTS_UNIQUE_DEF P) in *)
+(*     let th2 = UNDISCH (fst(EQ_IMP_RULE th1)) in *)
+(*     DISCH_ALL (CONJUNCT1 th2) in *)
+(*   fun th -> *)
+(*     try let abs = rand(concl th) in *)
+(*         let ty = snd(dest_var(bndvar abs)) in *)
+(*         MP (PINST [ty,aty] [abs,P] pth) th *)
+(*     with Failure _ -> failwith "EXISTENCE";; *)
