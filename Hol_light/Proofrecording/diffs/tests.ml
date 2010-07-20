@@ -91,6 +91,13 @@ let test_dar2 = DEDUCT_ANTISYM_RULE (ASSUME `p:bool`) (ASSUME `p:bool`)
 let _ = save_thm "test_dar2" test_dar2
 
 
+(* Rule EQ_MP *)
+
+let test_eqmp = EQ_MP (ASSUME `x <=> y`) (ASSUME `x:bool`)
+
+let _ = save_thm "test_eqmp" test_eqmp
+
+
 (* Mixing rules *)
 
 let test_mix = ABS `y:bool` (TRANS test_inst (REFL `((\y. y) y <=> y) <=> z <=> u`))
@@ -112,7 +119,11 @@ let _ = save_thm "test_mix3" test_mix3
 
 (* let _ = save_thm "test_mix4" test_mix4 *)
 
+let test_mix5 = INST [(`p ==> p`,`y:bool`)] (EQ_MP (ASSUME `x <=> y`) (ASSUME `x:bool`))
+
+let _ = save_thm "test_mix5" test_mix5
+
 
 (* Export *)
 
-let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"]
+let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"; "test_eqmp"; "test_mix5"]

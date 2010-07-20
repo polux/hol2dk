@@ -716,6 +716,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Nphyp of nterm
     | Npdisch of string * (int * ntype) list * nterm * int * nterm list
     | Npimpas of nterm * nterm * nproof * nproof
+    | Npeqmp of nterm * nterm * nproof * nproof
     | Nfact of string
 
 
@@ -772,7 +773,7 @@ module Proofobjects : Proofobject_primitives = struct
       | Npinst (name, fvt, l', h) ->
         out "("; out name; List.iter (fun (i, ty) ->
           let t = subst_idv_aux i ty l' in
-          out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) (List.filter (fun (t,_) -> List.mem t h) hyps); out ")"
+          out " "; print_term out t) fvt; List.iter (fun (_, n) -> out " "; out n) ((* List.filter (fun (t,_) -> List.mem t h) *) hyps); out ")"
       | Npcomb (a, b, s, t, u, v, p'1, p'2) ->
         out "(hol.mk_comb "; print_type out a; out " "; print_type out b; out " "; print_term out s; out " "; print_term out t; out " "; print_term out u; out " "; print_term out v; out " "; print_proof p'1; out " "; print_proof p'2; out ")"
       | Nphyp t -> out (List.assoc t hyps)
@@ -781,6 +782,8 @@ module Proofobjects : Proofobject_primitives = struct
         out "("; let s = new_name () in out s; out ": hol.eps "; print_term out t; out " => "; out name; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; if (List.length hyps' = 0 && pl = 0) then (out " "; out s) else (let i = ref 0 in List.iter (fun (_, n) -> if !i = pl then (out " "; out s); out " "; out n; incr i) hyps'); out ")"
       | Npimpas (p, q, p1, p2) ->
         out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
+      | Npeqmp (p, q, p1, p2) ->
+        out "(hol.eq_mp "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
       | Nfact thm -> out thm in
 
     print_proof p
@@ -864,9 +867,10 @@ module Proofobjects : Proofobject_primitives = struct
       (match t with
         | Napp (Napp (Ncst (Heq ty1), u), v) ->
           let fvt = fv t in
+          let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
           let typ = hol_type2ntype ty in
           let n = make_idV x typ in
-          (Npabs (typ, ty1, n, u, v, name, fvt, Context.elements h), h, heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
+          (Npabs (typ, ty1, n, u, v, name, (* fvt *) fvall, Context.elements h), h, heq (Narrow (typ, ty1)) (Nabs (n, typ, u)) (Nabs (n, typ, v)))
         | _ -> failwith "make_dependencies_aux: wp': rule abs incorrect")
 
     | Pbeta (x, ty, t) ->
@@ -885,11 +889,12 @@ module Proofobjects : Proofobject_primitives = struct
       let (p', h, t) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t);
       let fvt = fv t in
+      let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
       let l' = List.map (fun (s, ty, t) ->
         let typ = hol_type2ntype ty in
         let t' = term2nterm t in
         (make_idV s typ, typ, t')) l in
-      (Npinst (name, fvt, l', Context.elements h), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
+      (Npinst (name, (* fvt *) fvall, l', Context.elements h), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
 
     | Pcomb (p1, p2) ->
       let (p'1, h1, t1) = wp p1 in
@@ -910,9 +915,10 @@ module Proofobjects : Proofobject_primitives = struct
       let (p', h, t2) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t2);
       let fvt = fv t2 in
+      let fvall = Context.fold (fun t' res -> fusion (fv t') res) h fvt in
       let t' = term2nterm t in
       let pl = try Context.place t' h with | Not_found -> -1 in
-      (Npdisch (name, fvt, t', pl, Context.elements h), Context.remove t' h, himp t' t2)
+      (Npdisch (name, (* fvt *) fvall, t', pl, Context.elements h), Context.remove t' h, himp t' t2)
 
     | Pimpas (p1, p2) ->
       let (p'1, h1, t1) = wp p1 in
@@ -921,6 +927,14 @@ module Proofobjects : Proofobject_primitives = struct
         | Napp (Napp (Ncst Himp, p), q) ->
           (Npimpas (p, q, p'1, p'2), Context.union h1 h2, hequiv p q)
         | _ -> failwith "make_dependencies_aux: wp': rule impas incorrect")
+
+    | Peqmp (p1, p2) ->
+      let (p'1, h1, t1) = wp p1 in
+      let (p'2, h2, t2) = wp p2 in
+      (match t1 with
+        | Napp (Napp (Ncst (Heq _), p), q) ->
+          (Npeqmp (p, q, p'1, p'2), Context.union h1 h2, q)
+        | _ -> failwith "make_dependencies_aux: wp': rule eq_mp incorrect")
 
     | _ -> failwith "make_dependencies_aux: wp': rule not implemented yet"
 
@@ -956,12 +970,13 @@ module Proofobjects : Proofobject_primitives = struct
 
   let export_thm out thmname hyps cl p =
     let fvcl = fv cl in
+    let fvall = Context.fold (fun t res -> fusion (fv t) res) hyps fvcl in
     out "\n\n"; out thmname; out " : hol.eps ";
     let t = Context.fold (fun t res -> himp t res) hyps cl in
-    print_term out (close_term t fvcl); out ".\n";
+    print_term out (close_term t (* fvcl *) fvall); out ".\n";
     out "[";
     let ass =
-      (match fvcl with
+      (match (* fvcl *) fvall with
         | [] ->
           (try
              let a = Context.min_elt hyps in
@@ -979,7 +994,7 @@ module Proofobjects : Proofobject_primitives = struct
             out ", "; out m; out ": hol.eps "; print_term out b;
             (b,m)::acc) hyps []) in
     out "] ";
-    out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvcl; List.iter (fun (_, n) -> out " "; out n) ass; out " --> "; print_proof out ass p; out "."
+    out thmname; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) (* fvcl *) fvall; List.iter (fun (_, n) -> out " "; out n) ass; out " --> "; print_proof out ass p; out "."
 
 
   (* Export theorems with sharing *)
