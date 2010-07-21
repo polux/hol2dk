@@ -46,6 +46,10 @@ let test_mk_comb = MK_COMB (REFL `\x:bool. x`, REFL `y:bool`)
 
 let _ = save_thm "test_mk_comb" test_mk_comb
 
+let test_mk_comb2 = MK_COMB (REFL `<=>`, ASSUME `x7 <=> True`)
+
+let _ = save_thm "test_mk_comb2" test_mk_comb2
+
 
 (* Rule ASSUME *)
 
@@ -142,4 +146,4 @@ let _ = save_thm "test_instt" test_instt
 
 (* Export *)
 
-let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"; "test_eqmp"; "test_mix5"; "test_tyvar"; "test_tyvar2"; "test_instt"]
+let _ = export_list ["test_refl"; "test_trans"; "test_abs"; "test_beta"; "test_inst"; "test_mix"; "test_mk_comb"; "test_assume"; "test_mix2"; "test_mix3"; "test_dar"; "test_dar2"; "test_eqmp"; "test_mix5"; "test_tyvar"; "test_tyvar2"; "test_instt"; "test_mk_comb2"]

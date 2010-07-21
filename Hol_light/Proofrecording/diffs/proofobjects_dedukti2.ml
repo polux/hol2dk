@@ -219,7 +219,7 @@ module Proofobjects : Proofobject_primitives = struct
   (*  (A - {q}) u (B - {p}) |- p <=> q *)
 
   let proof_DEDUCT_ANTISYM_RULE (p1,t1) (p2,t2) =
-    proof_IMPAS (proof_DISCH p1 t2) (proof_DISCH p2 t1);;
+    proof_IMPAS (proof_DISCH p2 t1) (proof_DISCH p1 t2);;
 
 
   (* BETA is a base rule *)
@@ -767,6 +767,53 @@ module Proofobjects : Proofobject_primitives = struct
     | Nfact of string
 
 
+  (* Equality for types and terms *)
+
+  let rec eq_type t1 t2 =
+    match t1, t2 with
+      | Ntvar i, Ntvar j -> i = j
+      | Nbool, Nbool -> true
+      | Narrow (a,b), Narrow (c,d) -> (eq_type a c) && (eq_type b d)
+      | Ntdef (i,l), Ntdef (j,m) -> (i = j) && (compare_list l m)
+      | _, _ -> false
+
+  and compare_list l m =
+    match l, m with
+      | [], [] -> true
+      | t::q, u::r -> (eq_type t u) && (compare_list q r)
+      | _, _ -> false
+
+  let eq_cst c d =
+    match c, d with
+      | Heq t1, Heq t2 | Heps t1, Heps t2 | Hforall t1, Hforall t2 | Hexists t1, Hexists t2 -> eq_type t1 t2
+      | Hand, Hand | Hor, Hor | Hnot, Hnot | Himp, Himp | Htrue, Htrue | Hfalse, Hfalse -> true
+      | _, _ -> false
+
+  let eq_term t1 t2 =
+
+    let rec ext_var i t1 l1 j t2 l2 =
+      match l1, l2 with
+        | [], [] -> i = j
+        | (x,ty1)::xs, (y,ty2)::ys ->
+          if ((x = i) && eq_type ty1 t1) then (
+            (y = j) && (eq_type ty2 t2)
+          ) else (
+            ((y <> j) or not (eq_type ty2 t2)) && (ext_var i t1 xs j t2 ys)
+          )
+        | _, _ -> false in
+
+    let rec eq_term l1 l2 t1 t2 =
+      match t1, t2 with
+        | Nvar (i,t1), Nvar (j,t2) -> (eq_type t1 t2) && (ext_var i t1 l1 j t2 l2)
+        | Ncst c, Ncst d -> eq_cst c d
+        | Ndef (i,t1), Ndef (j,t2) -> (i = j) && (eq_type t1 t2)
+        | Napp (u1,v1), Napp (u2,v2) -> (eq_term l1 l2 u1 u2) && (eq_term l1 l2 v1 v2)
+        | Nabs (i,t1,u), Nabs (j,t2,v) -> (eq_type t1 t2) && (eq_term ((i,t1)::l1) ((j,t2)::l2) u v)
+      | _, _ -> false in
+
+    eq_term [] [] t1 t2
+
+
   (* Pretty printers *)
 
   let rec print_type out = function
@@ -846,6 +893,53 @@ module Proofobjects : Proofobject_primitives = struct
     print_proof p
 
 
+  (* Pretty printer for the old proof format (for debugging) *)
+
+  let rec pp_proof out p =
+    pp_proof2 out (content_of p)
+
+  and pp_proof2 out = function
+    | Prefl t -> out "(Prefl "; print_term out (term2nterm t); out ")"
+    | Pbeta (s, ty, t) -> out "(Pbeta "; out s; out ", "; print_type out (hol_type2ntype ty); out ", "; print_term out (term2nterm t); out ")"
+    | Pinstt (p, l) -> out "(Pinstt "; pp_proof out p; out ", [";
+      (match l with
+        | [] -> ()
+        | (s,ty)::q -> out "("; out s; out ", "; print_type out (hol_type2ntype ty); out ")"; List.iter (fun (s,ty) -> out "; ("; out s; out ", "; print_type out (hol_type2ntype ty); out ")") q);
+      out "])"
+    | Pabs (p, s, ty) -> out "(Pabs "; pp_proof out p; out ", "; out s; out ", "; print_type out (hol_type2ntype ty); out ")"
+    | Pdisch (p,t) -> out "(Pdisch "; pp_proof out p; out ", "; print_term out (term2nterm t); out ")"
+    | Phyp t -> out "(Phyp "; print_term out (term2nterm t); out ")"
+    | Pinst (p, l) -> out "(Pinst "; pp_proof out p; out ", [";
+      (match l with
+        | [] -> ()
+        | (s,ty,t)::q ->
+          let typ = hol_type2ntype ty in
+          out "(x"; out (string_of_int (make_idV s typ)); out ", "; print_type out typ; out ", "; print_term out (term2nterm t); out ")"; List.iter (fun (s,ty,t) ->
+            let typ = hol_type2ntype ty in
+            out "; (x"; out (string_of_int (make_idV s typ)); out ", "; print_type out typ; out ", "; print_term out (term2nterm t); out ")") q);
+      out "])"
+    | Ptrans (p1,p2) -> out "(Ptrans "; pp_proof out p1; out ", "; pp_proof out p2; out ")"
+    | Pcomb (p1,p2) -> out "(Pcomb "; pp_proof out p1; out ", "; pp_proof out p2; out ")"
+    | Peqmp (p1,p2) -> out "(Peqmp "; pp_proof out p1; out ", "; pp_proof out p2; out ")"
+    | Pimpas (p1,p2) -> out "(Pimpas "; pp_proof out p1; out ", "; pp_proof out p2; out ")"
+    | Pspec _ -> out "Pspec"
+    | Pgen _ -> out "Pgen"
+    | Psym _ -> out "Psym"
+    | Pexists _ -> out "Pexists"
+    | Pchoose _ -> out "Pchoose"
+    | Pconj _ -> out "Pconj"
+    | Pconjunct1 _ -> out "Pconjunct1"
+    | Pconjunct2 _ -> out "Pconjunct2"
+    | Pdisj1 _ -> out "Pdisj1"
+    | Pdisj2 _ -> out "Pdisj2"
+    | Pdisjcases _ -> out "Pdisjcases"
+    | Pnoti _ -> out "Pnoti"
+    | Pnote _ -> out "Pnote"
+    | Pcontr _ -> out "Pcontr"
+    | Paxm _ -> out "Paxm"
+    | Pdef (s,ty,t) -> out "(Pdef "; out s; out ", "; print_type out (hol_type2ntype ty); out ", "; print_term out (term2nterm t); out ")"
+    | Ptyintro _ -> out "Ptyintro"
+
   (* Facilities *)
 
   let heq a t u = Napp (Napp (Ncst (Heq a), t), u);;
@@ -892,7 +986,7 @@ module Proofobjects : Proofobject_primitives = struct
     Depgraph.Dep.add_dep dep_graph thm thmname;
     Nfact thm in
 
-  let share_info_of p = None in
+  let share_info_of p = (* None in *)
       (* match content_of p with *)
       (*   | Pabs (p, _, _) -> *)
       (*       let name = THEORY_NAME^"_"^(get_iname ()) in *)
@@ -900,16 +994,18 @@ module Proofobjects : Proofobject_primitives = struct
       (*       Depgraph.Dep.add_thm dep_graph name; *)
       (*       Some(THEORY_NAME,name,(name,p,None)) *)
       (*   | _ -> None *)
-            (* match (disk_info_of p) with *)
-            (*   | Some (thyname,thmname) -> Some(thyname,thmname,il) *)
-            (*   | None -> *)
-            (*       if do_share p then *)
-            (*         let name = THEORY_NAME^"_"^(get_iname ()) in *)
-            (*         set_disk_info_of p THEORY_NAME name; *)
-            (*         Depgraph.Dep.add_thm dep_graph name; *)
-            (*         Some(THEORY_NAME,name,(name,p,None)::il) *)
-            (*       else *)
-            (*         None *)
+    match (disk_info_of p) with
+      | Some (thyname,thmname2) ->
+        Some(thyname,thmname2,None(* ,il *))
+      | None ->
+        if do_share p then (
+          let name = THEORY_NAME^"_"^(get_iname ()) in
+          set_disk_info_of p THEORY_NAME name;
+          Depgraph.Dep.add_thm dep_graph name;
+          Some(THEORY_NAME,name,Some p(* (name,p,None)::il *))
+        ) else (
+          None
+        ) in
 
   let rec write_proof p =
 
@@ -918,11 +1014,13 @@ module Proofobjects : Proofobject_primitives = struct
 
   and wp' = function
     | Prefl t ->
+      (* print_string "Prefl\n"; *)
       let u = term2nterm t in
       let ty = type_of u in
       (Nprefl (u, ty), Context.empty, heq ty u u)
 
     | Ptrans (p1,p2) ->
+      (* print_string "Ptrans\n"; *)
       let p'1, h1, t1 = wp p1 in
       let p'2, h2, t2 = wp p2 in
       (match t1, t2 with
@@ -930,9 +1028,11 @@ module Proofobjects : Proofobject_primitives = struct
         | _, _ -> failwith "make_dependencies_aux: wp': rule trans incorrect")
 
     | Pabs (p,x,ty) ->
+      (* print_string "Pabs\n"; *)
       let name = THEORY_NAME^"_"^(get_iname ()) in
       set_disk_info_of p THEORY_NAME name;
       Depgraph.Dep.add_thm dep_graph name;
+      Depgraph.Dep.add_dep dep_graph name thmname;
       let (p', h, t) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t);
       (match t with
@@ -947,6 +1047,7 @@ module Proofobjects : Proofobject_primitives = struct
         | _ -> failwith "make_dependencies_aux: wp': rule abs incorrect")
 
     | Pbeta (x, ty, t) ->
+      (* print_string "Pbeta\n"; *)
       let typ = hol_type2ntype ty in
       let n = make_idV x typ in
       let t' = term2nterm t in
@@ -956,9 +1057,11 @@ module Proofobjects : Proofobject_primitives = struct
       (Npbeta (typ, ty2, n, t', t3), Context.empty, heq ty2 (Napp (t2, t3)) t')
 
     | Pinst (p, l) ->
+      (* print_string "Pinst\n"; *)
       let name = THEORY_NAME^"_"^(get_iname ()) in
       set_disk_info_of p THEORY_NAME name;
       Depgraph.Dep.add_thm dep_graph name;
+      Depgraph.Dep.add_dep dep_graph name thmname;
       let (p', h, t) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t);
       let fvt = fv t in
@@ -973,9 +1076,11 @@ module Proofobjects : Proofobject_primitives = struct
       (Npinst (name, (* fvt *) fvall, l', Context.elements h), Context.map (fun t2 -> subst_idv t2 l') h, subst_idv t l')
 
     | Pinstt (p, l) ->
+      (* print_string "Pinstt\n"; *)
       let name = THEORY_NAME^"_"^(get_iname ()) in
       set_disk_info_of p THEORY_NAME name;
       Depgraph.Dep.add_thm dep_graph name;
+      Depgraph.Dep.add_dep dep_graph name thmname;
       let (p', h, t) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t);
       let fvt = fv t in
@@ -989,21 +1094,26 @@ module Proofobjects : Proofobject_primitives = struct
       (Npinstt (name, fvall, l', Context.elements h), Context.map (fun t2 -> subst_idt t2 l') h, subst_idt t l')
 
     | Pcomb (p1, p2) ->
+      (* print_string "Pcomb\n"; *)
       let (p'1, h1, t1) = wp p1 in
       let (p'2, h2, t2) = wp p2 in
       (match (t1, t2) with
         | Napp (Napp (Ncst (Heq (Narrow (a, b))), s), t), Napp (Napp (Ncst (Heq _), u), v) ->
           (Npcomb (a, b, s, t, u, v, p'1, p'2), Context.union h1 h2, heq b (Napp (s, u)) (Napp (t, v)))
-        | _ -> failwith "make_dependencies_aux: wp': rule comb incorrect")
+        | _ ->
+          failwith "make_dependencies_aux: wp': rule comb incorrect")
 
     | Phyp t ->
+      (* print_string "Phyp\n"; *)
       let t' = term2nterm t in
       (Nphyp t', Context.singleton t', t')
 
     | Pdisch (p, t) ->
+      (* print_string "Pdisch\n"; *)
       let name = THEORY_NAME^"_"^(get_iname ()) in
       set_disk_info_of p THEORY_NAME name;
       Depgraph.Dep.add_thm dep_graph name;
+      Depgraph.Dep.add_dep dep_graph name thmname;
       let (p', h, t2) = write_proof p in
       Hashtbl.add proof_of_thm name (p', h, t2);
       let fvt = fv t2 in
@@ -1016,6 +1126,7 @@ module Proofobjects : Proofobject_primitives = struct
       (Npdisch (name, (* fvt *) fvall, t', pl, Context.elements h), Context.remove t' h, himp t' t2)
 
     | Pimpas (p1, p2) ->
+      (* print_string "Pimpas\n"; *)
       let (p'1, h1, t1) = wp p1 in
       let (p'2, h2, t2) = wp p2 in
       (match t1 with
@@ -1024,46 +1135,48 @@ module Proofobjects : Proofobject_primitives = struct
         | _ -> failwith "make_dependencies_aux: wp': rule impas incorrect")
 
     | Peqmp (p1, p2) ->
+      (* print_string "Peqmp\n"; *)
       let (p'1, h1, t1) = wp p1 in
       let (p'2, h2, t2) = wp p2 in
       (match t1 with
-        | Napp (Napp (Ncst (Heq _), p), q) ->
+        | Napp (Napp (Ncst (Heq Nbool), p), q) ->
           (Npeqmp (p, q, p'1, p'2), Context.union h1 h2, q)
         | _ -> failwith "make_dependencies_aux: wp': rule eq_mp incorrect")
 
     | Pdef (name, ty, tm) ->
+      (* print_string "Pdef\n"; *)
       (match name with
         | "T" ->
-          (Nfact (THEORY_NAME^"_DEF_T"), Context.empty, hequiv htrue (term2nterm tm))
+          (Nfact ("hol."^THEORY_NAME^"_DEF_T"), Context.empty, hequiv htrue (term2nterm tm))
         | "/\\" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hand) (term2nterm tm) in
-          (Nfact (THEORY_NAME^"_DEF__slash__backslash_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__slash__backslash_"), Context.empty, tm)
         | "==>" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Himp) (term2nterm tm) in
-          (Nfact (THEORY_NAME^"_DEF__equal__equal__greaterthan_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__equal__equal__greaterthan_"), Context.empty, tm)
         | "!" ->
           let a2 = hol_type2ntype ty in
           (match a2 with
             | Narrow (Narrow (b, _), _) ->
               let tm = heq a2 (Ncst (Hforall b)) (term2nterm tm) in
-              (Nfact (THEORY_NAME^"_DEF__exclamationmark_"), Context.empty, tm)
+              (Nfact ("hol."^THEORY_NAME^"_DEF__exclamationmark_"), Context.empty, tm)
             | _ -> failwith "make_dependencies_aux: wp': definition of ! incorrect")
         | "?" ->
           let a2 = hol_type2ntype ty in
           (match a2 with
             | Narrow (Narrow (b, _), _) ->
               let tm = heq a2 (Ncst (Hexists b)) (term2nterm tm) in
-              (Nfact (THEORY_NAME^"_DEF__questionmark_"), Context.empty, tm)
+              (Nfact ("hol."^THEORY_NAME^"_DEF__questionmark_"), Context.empty, tm)
             | _ -> failwith "make_dependencies_aux: wp': definition of ? incorrect")
         | "\\/" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hor) (term2nterm tm) in
-          (Nfact (THEORY_NAME^"_DEF__backslash__slash_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__backslash__slash_"), Context.empty, tm)
         | "F" ->
           let tm = hequiv (Ncst Hfalse) (term2nterm tm) in
-          (Nfact (THEORY_NAME^"_DEF_F"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF_F"), Context.empty, tm)
         | "~" ->
           let tm = heq (Narrow (Nbool, Nbool)) (Ncst Hnot) (term2nterm tm) in
-          (Nfact (THEORY_NAME^"_DEF__tilde_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__tilde_"), Context.empty, tm)
         | "_FALSITY_" ->
           let tm = heq Nbool (Ncst Hfalse) (Ncst Hfalse) in
           (Nprefl (Ncst Hfalse, Nbool), Context.empty, tm)
@@ -1074,11 +1187,20 @@ module Proofobjects : Proofobject_primitives = struct
 
   and wp p =
     match share_info_of p with
-      | Some(_, thmname, (name, p, c_opt)) ->
-        let (p', h, t) = write_proof p in
-        set_disk_info_of p THEORY_NAME thmname;
-        Hashtbl.add proof_of_thm thmname (p', h, t);
-        wdi thmname, h, t
+      | Some(_, thmname, p_opt) ->
+        (match p_opt with
+          | Some p ->
+            let (p', h, t) = write_proof p in
+            Hashtbl.add proof_of_thm thmname (p', h, t);
+            wdi thmname, h, t
+          | None ->
+            let (_, h, t) = Hashtbl.find proof_of_thm thmname in
+            wdi thmname, h, t)
+      (* | Some(_, thmname, (name, p, c_opt)) -> *)
+      (*   let (p', h, t) = write_proof p in *)
+      (*   set_disk_info_of p THEORY_NAME thmname; *)
+      (*   Hashtbl.add proof_of_thm thmname (p', h, t); *)
+      (*   wdi thmname, h, t *)
       | None -> wp' (content_of p) in
 
           (* match disk_info_of p with *)
@@ -1168,11 +1290,13 @@ module Proofobjects : Proofobject_primitives = struct
 
   let make_dependencies out ((thmname, pr, _) as p) =
 
-    print_endline thmname;
+    (* print_endline thmname; *)
 
     let dep_graph = Depgraph.Dep.create () in
     let proof_of_thm = Hashtbl.create (references pr) in
     Depgraph.Dep.add_thm dep_graph thmname;
+
+    (* print_string "p = "; pp_proof print_string pr; print_newline (); *)
 
     make_dependencies_aux dep_graph proof_of_thm p;
 
