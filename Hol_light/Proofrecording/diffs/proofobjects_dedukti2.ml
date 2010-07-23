@@ -764,7 +764,7 @@ module Proofobjects : Proofobject_primitives = struct
     | Npdisch of string * (((int * ntype) list) * (int list)) * nterm * int * nterm list
     | Npimpas of nterm * nterm * nproof * nproof
     | Npeqmp of nterm * nterm * nproof * nproof
-    | Nfact of string
+    | Nfact of string * (((int * ntype) list) * (int list))
 
 
   (* Equality for types and terms *)
@@ -888,7 +888,9 @@ module Proofobjects : Proofobject_primitives = struct
         out "(hol.prop_ext "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
       | Npeqmp (p, q, p1, p2) ->
         out "(hol.eq_mp "; print_term out p; out " "; print_term out q; out " "; print_proof p1; out " "; print_proof p2; out ")"
-      | Nfact thm -> out thm in
+      | Nfact (thm, fvall) ->
+        let (fvt, fVt) = fvall in
+        out "("; out thm; List.iter (fun i -> out " X"; out (string_of_int i)) fVt; List.iter (fun (x, _) -> out " x"; out (string_of_int x)) fvt; out ")" in
 
     print_proof p
 
@@ -982,9 +984,9 @@ module Proofobjects : Proofobject_primitives = struct
     (* | [] -> () *)
     (* | (thmname, p, c_opt)::il -> *)
 
-  let wdi thm =
+  let wdi thm fvall =
     Depgraph.Dep.add_dep dep_graph thm thmname;
-    Nfact thm in
+    Nfact (thm, fvall) in
 
   let share_info_of p = (* None in *)
       (* match content_of p with *)
@@ -1147,36 +1149,36 @@ module Proofobjects : Proofobject_primitives = struct
       (* print_string "Pdef\n"; *)
       (match name with
         | "T" ->
-          (Nfact ("hol."^THEORY_NAME^"_DEF_T"), Context.empty, hequiv htrue (term2nterm tm))
+          (Nfact ("hol."^THEORY_NAME^"_DEF_T", ([],[])), Context.empty, hequiv htrue (term2nterm tm))
         | "/\\" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hand) (term2nterm tm) in
-          (Nfact ("hol."^THEORY_NAME^"_DEF__slash__backslash_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__slash__backslash_", ([],[])), Context.empty, tm)
         | "==>" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Himp) (term2nterm tm) in
-          (Nfact ("hol."^THEORY_NAME^"_DEF__equal__equal__greaterthan_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__equal__equal__greaterthan_", ([],[])), Context.empty, tm)
         | "!" ->
           let a2 = hol_type2ntype ty in
           (match a2 with
             | Narrow (Narrow (b, _), _) ->
               let tm = heq a2 (Ncst (Hforall b)) (term2nterm tm) in
-              (Nfact ("hol."^THEORY_NAME^"_DEF__exclamationmark_"), Context.empty, tm)
+              (Nfact ("hol."^THEORY_NAME^"_DEF__exclamationmark_", ([],[])), Context.empty, tm)
             | _ -> failwith "make_dependencies_aux: wp': definition of ! incorrect")
         | "?" ->
           let a2 = hol_type2ntype ty in
           (match a2 with
             | Narrow (Narrow (b, _), _) ->
               let tm = heq a2 (Ncst (Hexists b)) (term2nterm tm) in
-              (Nfact ("hol."^THEORY_NAME^"_DEF__questionmark_"), Context.empty, tm)
+              (Nfact ("hol."^THEORY_NAME^"_DEF__questionmark_", ([],[])), Context.empty, tm)
             | _ -> failwith "make_dependencies_aux: wp': definition of ? incorrect")
         | "\\/" ->
           let tm = heq (Narrow (Nbool, Narrow (Nbool, Nbool))) (Ncst Hor) (term2nterm tm) in
-          (Nfact ("hol."^THEORY_NAME^"_DEF__backslash__slash_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__backslash__slash_", ([],[])), Context.empty, tm)
         | "F" ->
           let tm = hequiv (Ncst Hfalse) (term2nterm tm) in
-          (Nfact ("hol."^THEORY_NAME^"_DEF_F"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF_F", ([],[])), Context.empty, tm)
         | "~" ->
           let tm = heq (Narrow (Nbool, Nbool)) (Ncst Hnot) (term2nterm tm) in
-          (Nfact ("hol."^THEORY_NAME^"_DEF__tilde_"), Context.empty, tm)
+          (Nfact ("hol."^THEORY_NAME^"_DEF__tilde_", ([],[])), Context.empty, tm)
         | "_FALSITY_" ->
           let tm = heq Nbool (Ncst Hfalse) (Ncst Hfalse) in
           (Nprefl (Ncst Hfalse, Nbool), Context.empty, tm)
@@ -1192,10 +1194,18 @@ module Proofobjects : Proofobject_primitives = struct
           | Some p ->
             let (p', h, t) = write_proof p in
             Hashtbl.add proof_of_thm thmname (p', h, t);
-            wdi thmname, h, t
+            let fvt = fv t in
+            let fvall = Context.fold (fun t' (res, rEs) ->
+              let (fvt', fVt') = fv t' in
+              (fusion fvt' res, fusion fVt' rEs)) h fvt in
+            wdi thmname fvall, h, t
           | None ->
             let (_, h, t) = Hashtbl.find proof_of_thm thmname in
-            wdi thmname, h, t)
+            let fvt = fv t in
+            let fvall = Context.fold (fun t' (res, rEs) ->
+              let (fvt', fVt') = fv t' in
+              (fusion fvt' res, fusion fVt' rEs)) h fvt in
+            wdi thmname fvall, h, t)
       (* | Some(_, thmname, (name, p, c_opt)) -> *)
       (*   let (p', h, t) = write_proof p in *)
       (*   set_disk_info_of p THEORY_NAME thmname; *)
