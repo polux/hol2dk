@@ -1,0 +1,211 @@
+\section{Embedding classical HOL into Dedukti}
+
+\begin{frame}
+\frametitle{Outline}
+
+\tableofcontents[currentsection]
+\end{frame}
+
+
+\subsection{Presentation}
+
+\begin{frame}
+\frametitle{Presentation}
+
+Purpose:
+\begin{itemize}
+\item well-understood logical framework
+\item many LCF-like theorem provers
+\item in particular HOL Light
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Main idea}
+
+Main idea:
+\begin{itemize}
+\item embedding using HOAS
+\item translation of HOL propositions into Dedukti terms
+\item proofs as rewriting rules
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{HOL as a first order theory [Dowek et al. 1999]}
+
+Simple types:
+\begin{itemize}
+\item $o$
+\item $a \to b$
+\end{itemize}
+
+\vspace{0.5cm}
+
+Simply-typed terms:
+\begin{itemize}
+\item $x$, $\lambda x.t$, $t\ u$
+\item constants: $=$, logical connectives
+\end{itemize}
+
+\vspace{0.5cm}
+
+A set of inference rules:
+\begin{mathpar}
+  \inferrule*{ }{\vdash t = t}
+
+  \inferrule*{\Gamma \vdash p \Leftrightarrow q\\\Delta \vdash
+    p}{\Gamma \cup \Delta \vdash q}
+\end{mathpar}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Zoom on inference rules}
+
+Inference rules:
+\begin{mathpar}
+  \inferrule*{ }{\vdash t = t}
+
+  \inferrule*{\Gamma \vdash p \Leftrightarrow q\\\Delta \vdash
+    p}{\Gamma \cup \Delta \vdash q}
+\end{mathpar}
+
+\vspace{0.5cm}
+
+Theorem $\Gamma \vdash p$:
+\begin{itemize}
+\item $\Gamma$: set of terms of type $o$
+\item $p$: term of type $o$
+\end{itemize}
+
+\vspace{0.5cm}
+
+\begin{itemize}
+\item LCF : theorems as inhabitants of an abstract data-type
+\end{itemize}
+
+\end{frame}
+
+
+\subsection{Embedding}
+
+\begin{frame}[fragile]
+\frametitle{Types and terms [Schürmann and Stehr 2006]}
+
+\begin{block}{Types:}
+\begin{lstlisting}
+htype: Type.
+  o: htype.
+  $\ \mapsto\ $: htype ->$\ $ htype ->$\ $ htype.
+\end{lstlisting}
+\end{block}
+
+\begin{block}{Terms:}
+\begin{lstlisting}
+hterm: htype -> Type.
+  $\lambda$: (hterm a ->$\ $hterm b) ->$\ $hterm (a $\mapsto$ b).
+  $\alpha$: hterm (a $\mapsto$ b) ->$\ $hterm a ->$\ $hterm b.
+  $\dot{\to}$: hterm (o $\mapsto$ (o $\mapsto$ o)).
+  $\dot{\forall}$: hterm ((a $\mapsto$ o) $\mapsto$ o).
+  $\dot{=}$: hterm (a $\mapsto$ (a $\mapsto$ o)).
+\end{lstlisting}
+\end{block}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{$\beta$-reduction}
+
+\begin{block}{$\beta$-reduction:}
+\begin{lstlisting}
+[a b f x] $\alpha$ ($\lambda$ f) x -->$\ $f x.
+\end{lstlisting}
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{Notation:}
+\begin{lstlisting}
+  $\alpha$ f t u $\triangleq$ $\alpha$ ($\alpha$ f t) u
+\end{lstlisting}
+\end{block}
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{$\varepsilon$ translation}
+
+\lstinline!$\varepsilon$: hterm o -> Type!
+\begin{itemize}
+\item unary predicate symbol
+\item transforms a term $t$ of type $o$ into a the proposition
+  $\varepsilon\ t$
+\item defines a translation from the embedding into Dedukti terms
+\item \alert{gives an elimination scheme to each constant}
+\end{itemize}
+
+\vspace{0.5cm}
+
+\begin{block}{Translation:}
+\begin{lstlisting}
+[a b] $\varepsilon$($\alpha\ \dot{\to}$ a b) -->$\ \varepsilon$ a -> $\ \varepsilon$ b.
+[a f] $\varepsilon$ ($\alpha\ \dot{\forall}$ ($\lambda$ f)) -->$\ $b: hterm a -> $\ \varepsilon$ (f b).
+[a x y] $\varepsilon$ ($\alpha\ \dot{=}$ x y) -->
+  P: hterm (a $\mapsto$ o) -> $\ \varepsilon$ ($\alpha$ P x) -> $\ \varepsilon$ ($\alpha$ P y).
+\end{lstlisting}
+\end{block}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Example of an inference rule}
+
+\begin{mathpar}
+  \inferrule*{ }{\vdash t = t}
+\end{mathpar}
+
+\begin{block}{Encoding:}
+\lstinline!refl: a: htype -> t: hterm a -> $\varepsilon\ $ ($\alpha\ \dot{=}\ $t t).!
+
+\begin{overprint}
+\onslide<1>
+\lstinline![a t] refl a t --> ?!
+\onslide<2>
+\lstinline![a t] refl a t --> P: hterm (a $\ \mapsto\ $o) =>$\ $h: $\varepsilon\ $($\alpha\ $ P t) =>$\ $?!
+\onslide<3>
+\lstinline![a t] refl a t --> P: hterm (a $\ \mapsto\ $o) =>$\ $h: $\varepsilon\ $($\alpha\ $ P t) =>$\ $h.!
+\end{overprint}
+\end{block}
+
+\begin{block}{Remember:}
+\begin{lstlisting}
+[a x y] $\varepsilon$ ($\alpha\ \dot{=}$ x y) -->
+  P: hterm (a $\mapsto$ o) -> $\ \varepsilon$ ($\alpha$ P x) -> $\ \varepsilon$ ($\alpha$ P y).
+\end{lstlisting}
+\end{block}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Inference rules}
+
+\begin{itemize}
+\item Every inference rule can be proved that way
+\item Need axioms:
+  \begin{itemize}
+  \item extensionality
+  \item classical logic
+  \item axiom of choice
+  \end{itemize}
+\end{itemize}
+
+\end{frame}

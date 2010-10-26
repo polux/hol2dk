@@ -1,0 +1,22 @@
+\ProvidesPackage{beamerthemeinria}[2010/09/15 ver 0.2]
+
+\mode<presentation>
+
+\DeclareOptionBeamer{background}{\PassOptionsToPackage{background=#1}{beamerouterthemeinria}}
+
+\DeclareOptionBeamer{website}{
+  \usecolortheme[lightOnDark]{inria}
+  \setbeamertemplate{background canvas}[vertical shading][top=INRIAe,bottom=INRIAa]%
+}
+
+\ProcessOptionsBeamer %before useoutertheme, to transmit the background option
+
+\usecolortheme{inria}
+\useoutertheme[footline=authortitlenumber]{myminiframes}
+\useinnertheme{circles}
+% \useinnertheme{inria} %no inria inner theme yet
+
+\mode
+<all>
+
+\setbeamertemplate{qed symbol}{\vrule width1.5ex height1.5ex depth0pt}

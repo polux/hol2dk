@@ -1,0 +1,59 @@
+\documentclass[a4paper,11pt]{beamer}
+
+\usepackage{shortvrb,latexsym}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[american]{babel}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx}
+\usepackage{lastpage}
+\usepackage{afterpage}
+\usepackage{subfigure}
+\usepackage{epsfig}
+\usepackage{color}
+\usepackage{slashbox}
+\usepackage{colortbl}
+\usepackage{mathpartir}
+\usepackage{listings}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{hhline}
+
+\usetheme{inria}
+
+\setbeamertemplate{navigation symbols}{}
+
+\lstdefinelanguage{dedukti}%
+  {sensitive, %
+    morecomment=[l]{;;},%
+    literate=
+      {->}{{$\rightarrow$}}2
+      {-->}{{$\hookrightarrow$}}2
+      {=>}{{$\Rightarrow$}}2
+  }[comments]%
+
+\title{Encoding HOL into Dedukti}
+
+\author[Paul Brauner, Chantal Keller]{Paul Brauner \and
+  Chantal Keller}
+
+\institute{INRIA -- LIX -- École Polytechnique}
+
+\date{November, 2$^\text{nd}$ 2010}
+
+\setcounter{tocdepth}{1}
+
+\begin{document}
+
+\lstset{breaklines=true, xleftmargin=0cm, xrightmargin=0cm,
+  breakatwhitespace=true, mathescape=true, basicstyle=\normalsize,
+  numbers=none, frame=single, language=dedukti, frame=none}
+
+\frame{\titlepage}
+\input{embedding}
+\input{adequacy}
+\input{hollight}
+
+\end{document}
