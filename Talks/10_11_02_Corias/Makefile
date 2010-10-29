@@ -7,4 +7,4 @@ all: talk.pdf
 
 
 clean:
-	rm -f *~ *.aux *.log *.nav *.out *.snm *.toc
+	rm -f *~ *.aux *.log *.nav *.out *.snm *.toc *.vrb

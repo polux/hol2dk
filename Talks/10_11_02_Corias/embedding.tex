@@ -1,4 +1,4 @@
-\section{Embedding classical HOL into Dedukti}
+\section{Embedding}
 
 \begin{frame}
 \frametitle{Outline}
@@ -10,27 +10,16 @@
 \subsection{Presentation}
 
 \begin{frame}
-\frametitle{Presentation}
-
-Purpose:
-\begin{itemize}
-\item well-understood logical framework
-\item many LCF-like theorem provers
-\item in particular HOL Light
-\end{itemize}
-
-\end{frame}
-
-
-\begin{frame}
 \frametitle{Main idea}
 
-Main idea:
-\begin{itemize}
-\item embedding using HOAS
-\item translation of HOL propositions into Dedukti terms
-\item proofs as rewriting rules
-\end{itemize}
+\begin{block}{Main idea:}
+  \begin{itemize}
+  \item term embedding using HOAS (deep)
+  \item translation of HOL terms into Dedukti propositions
+    (deep~$\to$~shallow)
+  \item proofs as rewriting rules (shallow)
+  \end{itemize}
+\end{block}
 
 \end{frame}
 
@@ -106,6 +95,18 @@ htype: Type.
 \end{lstlisting}
 \end{block}
 
+\begin{overprint}
+\onslide<1>
+\begin{block}{Terms:}
+\begin{lstlisting}
+hterm: htype -> Type.
+  $\lambda$: (hterm a ->$\ $hterm b) ->$\ $hterm (a $\mapsto$ b).
+  $\alpha$: hterm (a $\mapsto$ b) ->$\ $hterm a ->$\ $hterm b.
+  $\dots$
+\end{lstlisting}
+\end{block}
+
+\onslide<2>
 \begin{block}{Terms:}
 \begin{lstlisting}
 hterm: htype -> Type.
@@ -114,8 +115,10 @@ hterm: htype -> Type.
   $\dot{\to}$: hterm (o $\mapsto$ (o $\mapsto$ o)).
   $\dot{\forall}$: hterm ((a $\mapsto$ o) $\mapsto$ o).
   $\dot{=}$: hterm (a $\mapsto$ (a $\mapsto$ o)).
+  $\dots$
 \end{lstlisting}
 \end{block}
+\end{overprint}
 
 \end{frame}
 
@@ -159,6 +162,7 @@ hterm: htype -> Type.
 [a f] $\varepsilon$ ($\alpha\ \dot{\forall}$ ($\lambda$ f)) -->$\ $b: hterm a -> $\ \varepsilon$ (f b).
 [a x y] $\varepsilon$ ($\alpha\ \dot{=}$ x y) -->
   P: hterm (a $\mapsto$ o) -> $\ \varepsilon$ ($\alpha$ P x) -> $\ \varepsilon$ ($\alpha$ P y).
+$\dots$
 \end{lstlisting}
 \end{block}
 
@@ -195,17 +199,30 @@ hterm: htype -> Type.
 \end{frame}
 
 
-\begin{frame}
+\begin{frame}[fragile]
 \frametitle{Inference rules}
 
 \begin{itemize}
 \item Every inference rule can be proved that way
+\item In fact, those rules are \alert{constant definitions}
 \item Need axioms:
   \begin{itemize}
-  \item extensionality
   \item classical logic
   \item axiom of choice
+  \item extensionality:
   \end{itemize}
 \end{itemize}
 
+\begin{lstlisting}
+f g: hterm (a $\mapsto$ b) ->
+  (x: hterm a -> $\varepsilon$ ($\alpha\ \dot{=}$ ($\alpha$ f x) ($\alpha$ g x))) ->
+  $\varepsilon$ ($\alpha\ \dot{=}$ f g).
+\end{lstlisting}
+
 \end{frame}
+
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "talk"
+%%% End: 

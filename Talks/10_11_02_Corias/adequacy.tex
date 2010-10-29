@@ -1,4 +1,4 @@
-\section{Adequacy of the embedding}
+\section{Adequacy}
 
 \begin{frame}
 \frametitle{Outline}
@@ -7,14 +7,78 @@
 \end{frame}
 
 
+\subsection{Counter-example}
+
 \begin{frame}
-\frametitle{Adequacy}
+\frametitle{Definition}
 
 \begin{itemize}
-\item must be ok in pure $\lambda\Pi$
-\item pb with rewriting rules
-\item example
-\item class of possible rewriting rules?
+\item Every term of the simply typed $\lambda$-calculus can be encoded?
+  \onslide<2->{\color{green}{\checkmark}\color{black}{}}
+\vspace{0.5cm}
+\item Every dedukti term of type [\lstinline!hterm a!] for any
+  [\lstinline!a!] corresponds to a term of the simply typed
+  $\lambda$-calculus?
+  \onslide<3->{\color{red}{\textbf{\texttimes}}\color{black}{}}
 \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile]
+\frametitle{Counter-example}
+
+\begin{lstlisting}
+$\lambda$: (hterm a ->$\ $hterm b) ->$\ $hterm (a $\mapsto$ b).
+$\alpha$: hterm (a $\mapsto$ b) ->$\ $hterm a ->$\ $hterm b.
+$\top$: hterm o.
+$\bot$: hterm o.
+\end{lstlisting}
+
+\begin{block}{Example}
+\begin{lstlisting}
+g : hterm (o $\mapsto$ o) ->$\ $hterm o.
+[x] g ($\lambda$ x) --> $\ \top$.
+[x y] g ($\alpha$ x y) --> $\ \bot$.
+
+foo : hterm ((o $\mapsto$ o) $\mapsto$ o).
+foo --> $\lambda$ ((x: hterm (o $\mapsto$ o)) =>$\ $g x).
+\end{lstlisting}
+\end{block}
+
+\end{frame}
+
+
+\subsection{Adequacy?}
+
+\begin{frame}
+\frametitle{Adequacy: the wish}
+
+\begin{itemize}
+\item No adequacy in $\lambda\Pi$-modulo
+\item Adequacy in pure $\lambda\Pi$?
+\item Adequacy in $\lambda\Pi$-modulo with a restriction on inference
+  rules?
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{The inference rules we use}
+
+\begin{block}{Proposition:}
+  ``Thou shalt not rewrite terms of type [\lstinline!hterm a!]''
+\end{block}
+
+\pause
+
+\begin{block}{Three kinds of inference rules:}
+\begin{itemize}
+\item $\beta$-reduction: \lstinline![a b f x] $\ \alpha\ $ ($\lambda\ $ f)$\ $x -->$\ $f x.! \onslide<4->{\color{red}{\textbf{\texttimes}}\color{black}{}}
+\item $\varepsilon$: \lstinline![a b] $\ \varepsilon\ $($\alpha\ \dot{\to}\ $ a b)$\ $-->$\ \varepsilon\ $ a -> $\ \varepsilon\ $ b.! \onslide<3->{\color{green}{\checkmark}\color{black}{}}
+\item inference rules: \lstinline![a t] refl a t --> P: hterm (a $\ \mapsto\ $o)$\ $=>$\ $h: $\ \varepsilon\ $($\alpha\ $ P t)$\ $=>$\ $h.! \onslide<3->{\color{green}{\checkmark}\color{black}{}}
+\end{itemize}
+\end{block}
 
 \end{frame}

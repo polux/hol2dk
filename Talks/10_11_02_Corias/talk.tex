@@ -20,6 +20,7 @@
 \usepackage{xspace}
 \usepackage{multirow}
 \usepackage{hhline}
+\usepackage{textcomp}
 
 \usetheme{inria}
 
@@ -39,7 +40,12 @@
 \author[Paul Brauner, Chantal Keller]{Paul Brauner \and
   Chantal Keller}
 
-\institute{INRIA -- LIX -- École Polytechnique}
+\institute{INRIA -- École Polytechnique}
+\titlegraphic{
+  \includegraphics[width=0.20\paperwidth]{Logos/inria_logotype.pdf}
+  \hspace{2cm}
+  \includegraphics[width=0.13\paperwidth]{Logos/x_logotype.pdf}
+}
 
 \date{November, 2$^\text{nd}$ 2010}
 
@@ -52,8 +58,10 @@
   numbers=none, frame=single, language=dedukti, frame=none}
 
 \frame{\titlepage}
+\input{introduction}
 \input{embedding}
 \input{adequacy}
 \input{hollight}
+\input{conclusion}
 
 \end{document}
