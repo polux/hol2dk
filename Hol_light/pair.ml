@@ -7,7 +7,7 @@
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (* ========================================================================= *)
 
-needs "recursion.ml";;
+needs "quot.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Constants implementing (or at least tagging) syntactic sugar.             *)
@@ -382,7 +382,12 @@ let (LET_TAC:tactic) =
     let assigs,bod = dest_let tm in
     let abbrevs =
       mapfilter (fun (x,y) -> if x = y then fail() else mk_eq(x,y)) assigs in
-    let deprths = map PROVE_DEPAIRING_EXISTS abbrevs in
+    let lvars = itlist (union o frees o lhs) abbrevs []
+    and avoids = itlist (union o thm_frees o snd) asl (frees w) in
+    let rename = vsubst (zip (variants avoids lvars) lvars) in
+    let abbrevs' = map (fun eq -> let l,r = dest_eq eq in mk_eq(rename l,r))
+                       abbrevs in
+    let deprths = map PROVE_DEPAIRING_EXISTS abbrevs' in
     (MAP_EVERY (REPEAT_TCL CHOOSE_THEN
        (fun th -> let th' = SYM th in
                   SUBST_ALL_TAC th' THEN ASSUME_TAC th')) deprths THEN

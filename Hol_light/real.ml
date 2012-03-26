@@ -5,6 +5,7 @@
 (*                                                                           *)
 (*            (c) Copyright, University of Cambridge 1998                    *)
 (*              (c) Copyright, John Harrison 1998-2007                       *)
+(*              (c) Copyright, Valentina Bruno 2010                          *)
 (* ========================================================================= *)
 
 needs "realarith.ml";;
@@ -1007,6 +1008,34 @@ let REAL_LE_INV2 = prove
   STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV2 THEN
   ASM_REWRITE_TAC[]);;
 
+let REAL_LT_LINV = prove
+ (`!x y. &0 < y /\ inv y < x ==> inv x < y`,
+  REPEAT STRIP_TAC THEN MP_TAC (SPEC `y:real` REAL_LT_INV) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  MP_TAC (SPECL [`(inv y:real)`; `x:real`] REAL_LT_INV2) THEN
+  ASM_REWRITE_TAC[REAL_INV_INV]);;
+
+let REAL_LT_RINV = prove
+ (`!x y. &0 < x /\ x < inv y ==> y < inv x`,
+  REPEAT STRIP_TAC THEN MP_TAC (SPEC `x:real` REAL_LT_INV) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  MP_TAC (SPECL [`x:real`; `inv y:real`] REAL_LT_INV2) THEN
+  ASM_REWRITE_TAC[REAL_INV_INV]);;
+
+let REAL_LE_LINV = prove
+ (`!x y. &0 < y /\ inv y <= x ==> inv x <= y`,
+  REPEAT STRIP_TAC THEN MP_TAC (SPEC `y:real` REAL_LT_INV) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  MP_TAC (SPECL [`(inv y:real)`; `x:real`] REAL_LE_INV2) THEN
+  ASM_REWRITE_TAC[REAL_INV_INV]);;
+
+let REAL_LE_RINV = prove
+ (`!x y. &0 < x /\ x <= inv y ==> y <= inv x`,
+  REPEAT STRIP_TAC THEN MP_TAC (SPEC `x:real` REAL_LT_INV) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  MP_TAC (SPECL [`x:real`; `inv y:real`] REAL_LE_INV2) THEN
+  ASM_REWRITE_TAC[REAL_INV_INV]);;
+
 let REAL_INV_LE_1 = prove
  (`!x. &1 <= x ==> inv(x) <= &1`,
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[GSYM REAL_INV_1] THEN
@@ -1201,6 +1230,10 @@ let REAL_EQ_SQUARE_ABS = prove
  (`!x y. abs x = abs y <=> x pow 2 = y pow 2`,
   REWRITE_TAC[GSYM REAL_LE_ANTISYM; REAL_LE_SQUARE_ABS]);;
 
+let REAL_LE_POW_2 = prove
+ (`!x. &0 <= x pow 2`,
+  REWRITE_TAC[REAL_POW_2; REAL_LE_SQUARE]);;
+
 let REAL_SOS_EQ_0 = prove
  (`!x y. x pow 2 + y pow 2 = &0 <=> x = &0 /\ y = &0`,
   REPEAT GEN_TAC THEN EQ_TAC THEN
@@ -1310,6 +1343,26 @@ let REAL_POW_EQ_EQ = prove
     REWRITE_RULE[EVEN_EXISTS]) THEN ASM_REWRITE_TAC[GSYM REAL_POW_POW]);;
 
 (* ------------------------------------------------------------------------- *)
+(* Some basic forms of the Archimedian property.                             *)
+(* ------------------------------------------------------------------------- *)
+
+let REAL_ARCH_SIMPLE = prove
+ (`!x. ?n. x <= &n`,
+  let lemma = prove(`(!x. (?n. x = &n) ==> P x) <=> !n. P(&n)`,MESON_TAC[]) in
+  MP_TAC(SPEC `\y. ?n. y = &n` REAL_COMPLETE) THEN REWRITE_TAC[lemma] THEN
+  MESON_TAC[REAL_LE_SUB_LADD; REAL_OF_NUM_ADD; REAL_LE_TOTAL;
+            REAL_ARITH `~(M <= M - &1)`]);;
+
+let REAL_ARCH_LT = prove
+ (`!x. ?n. x < &n`,
+  MESON_TAC[REAL_ARCH_SIMPLE; REAL_OF_NUM_ADD;
+            REAL_ARITH `x <= n ==> x < n + &1`]);;
+
+let REAL_ARCH = prove
+ (`!x. &0 < x ==> !y. ?n. y < &n * x`,
+  MESON_TAC[REAL_ARCH_LT; REAL_LT_LDIV_EQ]);;
+
+(* ------------------------------------------------------------------------- *)
 (* The sign of a real number, as a real number.                              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1356,6 +1409,16 @@ let REAL_SGN_DIV = prove
   REWRITE_TAC[REAL_SGN; REAL_ABS_DIV] THEN
   REWRITE_TAC[real_div; REAL_INV_MUL; REAL_INV_INV] THEN
   REAL_ARITH_TAC);;
+
+let REAL_SGN_EQ = prove
+ (`(!x. real_sgn x = &0 <=> x = &0) /\
+   (!x. real_sgn x = &1 <=> x > &0) /\
+   (!x. real_sgn x = -- &1 <=> x < &0)`,
+  REWRITE_TAC[real_sgn] THEN REAL_ARITH_TAC);;
+
+let REAL_SGN_CASES = prove
+ (`!x. real_sgn x = &0 \/ real_sgn x = &1 \/ real_sgn x = -- &1`,
+  REWRITE_TAC[real_sgn] THEN MESON_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Useful "without loss of generality" lemmas.                               *)

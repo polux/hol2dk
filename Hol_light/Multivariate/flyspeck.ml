@@ -76,20 +76,6 @@ let NOT_COPLANAR_NOT_COLLINEAR = prove
   EXISTS_TAC `affine hull {x:real^N,y}` THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC HULL_MONO THEN SET_TAC[]);;
 
-let AFFINE_DEPENDENT_IMP_COLLINEAR_3 = prove
- (`!a b c:real^N. affine_dependent {a,b,c} ==> collinear{a,b,c}`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[affine_dependent] THEN
-  REWRITE_TAC[IN_INSERT; NOT_IN_EMPTY; RIGHT_OR_DISTRIB] THEN
-  REWRITE_TAC[EXISTS_OR_THM; UNWIND_THM2; COLLINEAR_AFFINE_HULL] THEN
-  STRIP_TAC THENL
-   [MAP_EVERY EXISTS_TAC [`b:real^N`; `c:real^N`];
-    MAP_EVERY EXISTS_TAC [`a:real^N`; `c:real^N`];
-    MAP_EVERY EXISTS_TAC [`a:real^N`; `b:real^N`]] THEN
-  SIMP_TAC[INSERT_SUBSET; EMPTY_SUBSET; HULL_INC; IN_INSERT] THEN
-  POP_ASSUM MP_TAC THEN
-  MATCH_MP_TAC(SET_RULE `s SUBSET t ==> a IN s ==> a IN t`) THEN
-  MATCH_MP_TAC HULL_MONO THEN SET_TAC[]);;
-
 (* ------------------------------------------------------------------------- *)
 (* Some special scaling theorems.                                            *)
 (* ------------------------------------------------------------------------- *)
@@ -716,6 +702,10 @@ let AFFSIGN_DISJOINT_DIFF = prove
  (`!s t. affsign sgn s t = affsign sgn (s DIFF t) t`,
   REWRITE_TAC[AFFSIGN; SET_RULE `(s DIFF t) UNION t = s UNION t`]);;
 
+let AFF_GE_DISJOINT_DIFF = prove
+ (`!s t. aff_ge s t = aff_ge (s DIFF t) t`,
+  REWRITE_TAC[aff_ge_def] THEN MATCH_ACCEPT_TAC AFFSIGN_DISJOINT_DIFF);;
+
 let AFFSIGN_INJECTIVE_LINEAR_IMAGE = prove
  (`!f:real^M->real^N sgn s t v.
         linear f /\ (!x y. f x = f y ==> x = y)
@@ -1255,7 +1245,6 @@ let AFF_LT_SPECIAL_SCALE = prove
   MATCH_MP_TAC AFFSIGN_SPECIAL_SCALE THEN
   ASM_REWRITE_TAC[sgn_lt] THEN REAL_ARITH_TAC);;
 
-
 let AFFSIGN_0 = prove
  (`!sgn s t.
         FINITE s /\ FINITE t /\ (vec 0) IN (s DIFF t)
@@ -1367,14 +1356,18 @@ let AFF_GE_0_MULTIPLE_AFFINE_CONVEX = prove
 
 let AFF_GE_0_AFFINE_CONVEX_CONE = prove
  (`!s t:real^N->bool.
-        FINITE s /\ FINITE t /\ vec 0 IN (s DIFF t) /\ ~(t = {})
+        FINITE s /\ FINITE t /\ vec 0 IN (s DIFF t)
         ==> aff_ge s t =
                {x + y | x IN affine hull (s DIFF t) /\
                         y IN convex_cone hull t}`,
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[CONVEX_CONE_HULL_CONVEX_HULL;
-               AFF_GE_0_AFFINE_MULTIPLE_CONVEX] THEN
-  SET_TAC[]);;
+  REPEAT STRIP_TAC THEN ASM_CASES_TAC `t:real^N->bool = {}` THENL
+   [ASM_REWRITE_TAC[AFF_GE_EQ_AFFINE_HULL; CONVEX_CONE_HULL_EMPTY] THEN
+    REWRITE_TAC[IN_SING; DIFF_EMPTY] THEN
+    REWRITE_TAC[SET_RULE `{x + y:real^N | P x /\ y = a} = {x + a | P x}`] THEN
+    REWRITE_TAC[VECTOR_ADD_RID] THEN SET_TAC[];
+    ASM_SIMP_TAC[CONVEX_CONE_HULL_CONVEX_HULL_NONEMPTY;
+                  AFF_GE_0_AFFINE_MULTIPLE_CONVEX] THEN
+   SET_TAC[]]);;
 
 let AFF_GE_0_N = prove
  (`!s:real^N->bool.
@@ -1419,6 +1412,139 @@ let AFF_GE_0_CONVEX_HULL_ALT = prove
       ASM_REWRITE_TAC[VECTOR_MUL_LZERO; REAL_LT_REFL] THEN
       ASM_REWRITE_TAC[REAL_LT_LE]]]);;
 
+let AFF_GE_0_CONVEX_CONE_NEGATIONS = prove
+ (`!s t:real^N->bool.
+        FINITE s /\ FINITE t /\ vec 0 IN (s DIFF t)
+        ==> aff_ge s t =
+            convex_cone hull (s UNION t UNION IMAGE (--) (s DIFF t))`,
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[AFF_GE_0_AFFINE_CONVEX_CONE] THEN
+  ASM_SIMP_TAC[AFFINE_HULL_EQ_SPAN; HULL_INC] THEN
+  REWRITE_TAC[SPAN_CONVEX_CONE_ALLSIGNS; GSYM CONVEX_CONE_HULL_UNION] THEN
+  AP_TERM_TAC THEN SET_TAC[]);;
+
+let CONVEX_HULL_AFF_GE = prove
+ (`!s. convex hull s = aff_ge {} s`,
+  SIMP_TAC[aff_ge_def; AFFSIGN; CONVEX_HULL_FINITE; sgn_ge; UNION_EMPTY] THEN
+  REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN REPEAT GEN_TAC THEN
+  AP_TERM_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN MESON_TAC[]);;
+
+let POLYHEDRON_AFF_GE = prove
+ (`!s t:real^N->bool. FINITE s /\ FINITE t ==> polyhedron(aff_ge s t)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[aff_ge_def] THEN
+  ONCE_REWRITE_TAC[AFFSIGN_DISJOINT_DIFF] THEN
+  REWRITE_TAC[GSYM aff_ge_def] THEN
+  SUBGOAL_THEN `FINITE(s DIFF t) /\ FINITE(t:real^N->bool) /\
+                DISJOINT (s DIFF t) t`
+  MP_TAC THENL [ASM_SIMP_TAC[FINITE_DIFF] THEN ASM SET_TAC[]; ALL_TAC] THEN
+  POP_ASSUM_LIST(K ALL_TAC) THEN
+  SPEC_TAC(`s DIFF t:real^N->bool`,`s:real^N->bool`) THEN
+  MATCH_MP_TAC SET_PROVE_CASES THEN CONJ_TAC THENL
+   [REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM CONVEX_HULL_AFF_GE] THEN
+    MATCH_MP_TAC POLYTOPE_IMP_POLYHEDRON THEN REWRITE_TAC[polytope] THEN
+    ASM_MESON_TAC[];
+    ALL_TAC] THEN
+  MAP_EVERY X_GEN_TAC [`a:real^N`; `s:real^N->bool`] THEN
+  GEOM_ORIGIN_TAC `a:real^N` THEN REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `(vec 0:real^N) IN ((vec 0 INSERT s) DIFF t)` ASSUME_TAC THENL
+   [ASM SET_TAC[]; ALL_TAC] THEN
+  ASM_SIMP_TAC[AFF_GE_0_CONVEX_CONE_NEGATIONS; FINITE_INSERT] THEN
+  MATCH_MP_TAC POLYHEDRON_CONVEX_CONE_HULL THEN
+  ASM_SIMP_TAC[FINITE_INSERT; FINITE_UNION; FINITE_DIFF; FINITE_IMAGE]);;
+
+let CLOSED_AFF_GE = prove
+ (`!s t:real^N->bool. FINITE s /\ FINITE t ==> closed(aff_ge s t)`,
+  SIMP_TAC[POLYHEDRON_AFF_GE; POLYHEDRON_IMP_CLOSED]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Special case of aff_ge {x} {y}, i.e. rays or half-lines.                  *)
+(* ------------------------------------------------------------------------- *)
+
+let HALFLINE_REFL = prove
+ (`!x. aff_ge {x} {x} = {x}`,
+  ONCE_REWRITE_TAC[AFF_GE_DISJOINT_DIFF] THEN
+  ASM_REWRITE_TAC[DIFF_EQ_EMPTY; GSYM CONVEX_HULL_AFF_GE; CONVEX_HULL_SING]);;
+
+let HALFLINE_EXPLICIT = prove
+ (`!x y:real^N.
+        aff_ge {x} {y} =
+          {z | ?t1 t2. &0 <= t2 /\ t1 + t2 = &1 /\ z = t1 % x + t2 % y}`,
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `x:real^N = y` THENL
+   [ASM_REWRITE_TAC[HALFLINE_REFL]; AFF_TAC] THEN
+  REWRITE_TAC[REAL_ARITH `x + y = &1 <=> x = &1 - y`] THEN
+  REWRITE_TAC[VECTOR_ARITH `(&1 - x) % v + x % v:real^N = v`;
+    MESON[] `(?x y. P y /\ x = f y /\ Q x y) <=> (?y. P y /\ Q (f y) y)`] THEN
+  REWRITE_TAC[IN_ELIM_THM; IN_SING; EXTENSION] THEN MESON_TAC[REAL_POS]);;
+
+let HALFLINE = prove
+ (`!x y:real^N.
+        aff_ge {x} {y} =
+          {z | ?t. &0 <= t /\ z = (&1 - t) % x + t % y}`,
+  REWRITE_TAC[HALFLINE_EXPLICIT;  REAL_ARITH `x + y = &1 <=> x = &1 - y`] THEN
+  SET_TAC[]);;
+
+let CLOSED_HALFLINE = prove
+ (`!x y. closed(aff_ge {x} {y})`,
+  SIMP_TAC[CLOSED_AFF_GE; FINITE_SING]);;
+
+let SEGMENT_SUBSET_HALFLINE = prove
+ (`!x y. segment[x,y] SUBSET aff_ge {x} {y}`,
+  REWRITE_TAC[SEGMENT_CONVEX_HULL; CONVEX_HULL_2; HALFLINE_EXPLICIT] THEN
+  SET_TAC[]);;
+
+let ENDS_IN_HALFLINE = prove
+ (`(!x y. x IN aff_ge {x} {y}) /\ (!x y. y IN aff_ge {x} {y})`,
+  MESON_TAC[SEGMENT_SUBSET_HALFLINE; SUBSET; ENDS_IN_SEGMENT]);;
+
+let HALFLINE_SUBSET_AFFINE_HULL = prove
+ (`!x y. aff_ge {x} {y} SUBSET affine hull {x,y}`,
+  REWRITE_TAC[AFF_GE_SUBSET_AFFINE_HULL; SET_RULE `{x,y} = {x} UNION {y}`]);;
+
+let HALFLINE_INTER_COMPACT_SEGMENT = prove
+ (`!s a b:real^N.
+        compact s /\ convex s /\ a IN s
+        ==> ?c. aff_ge {a} {b} INTER s = segment[a,c]`,
+  REPEAT STRIP_TAC THEN ASM_CASES_TAC `b:real^N = a` THENL
+   [EXISTS_TAC `a:real^N` THEN
+    ASM_REWRITE_TAC[SEGMENT_REFL; HALFLINE_REFL] THEN ASM SET_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `?u v:real^N. aff_ge {a} {b} INTER s = segment[u,v]`
+  STRIP_ASSUME_TAC THENL
+   [MATCH_MP_TAC COMPACT_CONVEX_COLLINEAR_SEGMENT THEN
+    ASM_SIMP_TAC[CLOSED_INTER_COMPACT; CLOSED_AFF_GE; FINITE_SING] THEN
+    ASM_SIMP_TAC[CONVEX_INTER; CONVEX_AFF_GE] THEN CONJ_TAC THENL
+     [REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER] THEN
+      ASM_MESON_TAC[ENDS_IN_HALFLINE];
+      MATCH_MP_TAC COLLINEAR_SUBSET THEN
+      EXISTS_TAC `affine hull {a:real^N,b}` THEN
+      REWRITE_TAC[COLLINEAR_AFFINE_HULL_COLLINEAR; COLLINEAR_2] THEN
+      MATCH_MP_TAC(SET_RULE `s SUBSET u ==> (s INTER t) SUBSET u`) THEN
+      REWRITE_TAC[HALFLINE_SUBSET_AFFINE_HULL]];
+    ASM_CASES_TAC `u:real^N = a` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
+    ASM_CASES_TAC `v:real^N = a` THENL
+     [ASM_MESON_TAC[SEGMENT_SYM]; ALL_TAC] THEN
+    SUBGOAL_THEN `u IN aff_ge {a:real^N} {b} /\ v IN aff_ge {a} {b}`
+    MP_TAC THENL [ASM_MESON_TAC[IN_INTER; ENDS_IN_SEGMENT]; ALL_TAC] THEN
+    GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [HALFLINE; IN_ELIM_THM] THEN
+    DISCH_THEN(CONJUNCTS_THEN2
+     (X_CHOOSE_THEN `s:real` MP_TAC) (X_CHOOSE_THEN `t:real` MP_TAC)) THEN
+    MAP_EVERY ASM_CASES_TAC [`s = &0`; `t = &0`] THEN
+    ASM_REWRITE_TAC[REAL_SUB_RZERO; VECTOR_MUL_LID; VECTOR_MUL_LZERO;
+                    VECTOR_ADD_RID] THEN
+    ASM_REWRITE_TAC[REAL_LE_LT] THEN REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN `(a:real^N) IN segment[u,v]` MP_TAC THENL
+     [ASM_MESON_TAC[IN_INTER; ENDS_IN_HALFLINE]; ALL_TAC] THEN
+    ASM_REWRITE_TAC[IN_SEGMENT; LEFT_IMP_EXISTS_THM] THEN
+    X_GEN_TAC `u:real` THEN
+    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+    REWRITE_TAC[VECTOR_ARITH
+     `a = (&1 - u) % ((&1 - s) % a + s % b) + u % ((&1 - t) % a + t % b) <=>
+      ((&1 - u) * s + u * t) % (b - a):real^N = vec 0`] THEN
+    ASM_REWRITE_TAC[VECTOR_MUL_EQ_0; VECTOR_SUB_EQ] THEN
+    ASM_SIMP_TAC[REAL_LE_MUL; REAL_SUB_LE; REAL_LT_IMP_LE; REAL_ARITH
+     `&0 <= x /\ &0 <= y ==> (x + y = &0 <=> x = &0 /\ y = &0)`] THEN
+    ASM_SIMP_TAC[REAL_ENTIRE; REAL_LT_IMP_NZ] THEN REAL_ARITH_TAC]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Definition and properties of conv0.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -1450,12 +1576,6 @@ let CONV0_SUBSET_CONVEX_HULL = prove
 let CONV0_AFF_GT = prove
  (`!s. conv0 s = aff_gt {} s`,
   REWRITE_TAC[conv0; aff_gt_def]);;
-
-let CONVEX_HULL_AFF_GE = prove
- (`!s. convex hull s = aff_ge {} s`,
-  SIMP_TAC[aff_ge_def; AFFSIGN; CONVEX_HULL_FINITE; sgn_ge; UNION_EMPTY] THEN
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN REPEAT GEN_TAC THEN
-  AP_TERM_TAC THEN REWRITE_TAC[FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let CONVEX_HULL_CONV0_DECOMP = prove
  (`!s:real^N->bool.

@@ -28,8 +28,7 @@ let temp_path = ref "/tmp";;
 (* and for Ocaml >= 3.10, use camlp5 instead.                                *)
 (* ------------------------------------------------------------------------- *)
 
-if let v = String.sub Sys.ocaml_version 0 4 in
-   v = "3.10" or v = "3.11"
+if let v = String.sub Sys.ocaml_version 0 4 in v >= "3.10"
 then (Topdirs.dir_directory "+camlp5";
       Topdirs.dir_load Format.std_formatter "camlp5o.cma")
 else (Topdirs.dir_load Format.std_formatter "camlp4o.cma");;
@@ -126,7 +125,6 @@ loads "trivia.ml";;     (* Some very basic theories, e.g. type ":1"          *)
 loads "canon.ml";;      (* Tools for putting terms in canonical forms        *)
 loads "meson.ml";;      (* First order automation: MESON (model elimination) *)
 loads "quot.ml";;       (* Derived rules for defining quotient types         *)
-loads "recursion.ml";;  (* Tools for primitive recursion on inductive types  *)
 
 (* ------------------------------------------------------------------------- *)
 (* Mathematical theories and additional proof tools.                         *)
@@ -134,6 +132,7 @@ loads "recursion.ml";;  (* Tools for primitive recursion on inductive types  *)
 
 loads "pair.ml";;       (* Theory of pairs                                   *)
 loads "nums.ml";;       (* Axiom of Infinity, definition of natural numbers  *)
+loads "recursion.ml";;  (* Tools for primitive recursion on inductive types  *)
 loads "arith.ml";;      (* Natural number arithmetic                         *)
 loads "wf.ml";;         (* Theory of wellfounded relations                   *)
 loads "calc_num.ml";;   (* Calculation with natural numbers                  *)

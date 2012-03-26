@@ -1,3 +1,918 @@
+Fri  9th Mar 2012       Library/card.ml
+
+Added a few more trivial lemmas about cardinality:
+
+  CARD_LT_LE = |- !s t. s <_c t <=> s <=_c t /\ ~(s =_c t)
+
+  CARD_LE_LT = |- !s t. s <=_c t <=> s <_c t \/ s =_c t
+
+  COUNTABLE_ALT = |- !s. COUNTABLE s <=> s <=_c (:num)
+
+  COUNTABLE_CASES = |- !s. COUNTABLE s <=> FINITE s \/ s =_c (:num)
+
+Sun 26th Feb 2012       sets.ml
+
+Added
+
+    CARD_IMAGE_EQ_INJ =
+     |- !f:A->B s.
+        FINITE s
+        ==> (CARD(IMAGE f s) = CARD s <=>
+             !x y. x IN s /\ y IN s /\ f x = f y ==> x = y)
+
+    PAIRWISE_IMAGE =
+     |- !r f. pairwise r (IMAGE f s) <=>
+              pairwise (\x y. ~(f x = f y) ==> r (f x) (f y)) s
+
+Thu 23rd Feb 2012       sets.ml
+
+Added
+
+    PAIRWISE_INSERT =
+     |- !r x s.
+          pairwise r (x INSERT s) <=>
+          (!y. y IN s /\ ~(y = x) ==> r x y /\ r y x) /\
+          pairwise r s
+
+Tue 21st Feb 2012       sets.ml, Library/card.ml
+
+Added two direct equality results for sups and infs:
+
+SUP_EQ =
+ |- !s t. (!b. (!x. x IN s ==> x <= b) <=> (!x. x IN t ==> x <= b))
+          ==> sup s = sup t
+
+INF_EQ =
+ |- !s t. (!a. (!x. x IN s ==> a <= x) <=> (!x. x IN t ==> a <= x))
+           ==> inf s = inf t
+
+and a few basic lemmas about cardinality:
+
+  CARD_LE_COUNTABLE =
+    |- !s t. COUNTABLE t /\ s <=_c t ==> COUNTABLE s
+
+  CARD_COUNTABLE_CONG =
+    |- !s t. s =_c t ==> (COUNTABLE s <=> COUNTABLE t)
+
+  CARD_EQ_FINITE =
+    |- !s t. FINITE t /\ s =_c t ==> FINITE s
+
+  CARD_EQ_COUNTABLE =
+   |- !s t. COUNTABLE t /\ s =_c t ==> COUNTABLE s
+
+  CARD_EQ_IMAGE =
+   |- !f s.
+          (!x y. x IN s /\ y IN s /\ f x = f y ==> x = y)
+          ==> IMAGE f s =_c s
+
+  CARD_EQ_REAL_IMP_UNCOUNTABLE =
+   |- !s. s =_c (:real) ==> ~COUNTABLE s
+
+Sat 11th Feb 2012       Library/floor.ml
+
+Added the obvious facts that the integer and rational valued reals are
+both infinite:
+
+ INFINITE_INTEGER  = |- INFINITE integer
+
+ INFINITE_RATIONAL = |- INFINITE rational
+
+Thu  2nd Feb 2012       iterate.ml
+
+Added two theorems about pushing MODs through sums of natural numbers:
+
+MOD_NSUM_MOD =
+  |- !f n s.
+         FINITE s /\ ~(n = 0)
+         ==> nsum s f MOD n = nsum s (\i. f i MOD n) MOD n
+
+MOD_NSUM_MOD_NUMSEG =
+  |- !f a b n.
+         ~(n = 0) ==> nsum (a..b) f MOD n = nsum (a..b) (\i. f i MOD n) MOD n
+
+Wed  1st Feb 2012       arith.ml
+
+Added a theorem that's a trivial consequence of DIVISION, but sometimes a
+bit more convenient
+
+  DIVISION_SIMP =
+   |- (!m n. ~(n = 0) ==> m DIV n * n + m MOD n = m) /\
+      (!m n. ~(n = 0) ==> n * m DIV n + m MOD n = m)
+
+Wed  1st Feb 2012       Mizarlight/Makefile
+
+Fixed up the Makefile to choose camlp5 versus camlp4 in a correct way
+as in the main system Makefile (previously this failed for OCaml >= 3.12).
+
+Tue 31st Jan 2012       sets.ml
+
+Added one more set lemma, analogous to INTER_UNIONS:
+
+  DIFF_UNIONS =
+   |- !s t. (UNIONS s) DIFF t = UNIONS {x DIFF t | x IN s}
+
+Thu 26th Jan 2012       cart.ml
+
+Added a somewhat technical lemma, a generalization of FINITE_INDEX_INRANGE
+that is useful for obscure situations to get rid of range conditions in
+doubly indexed cartesian products:
+
+  FINITE_INDEX_INRANGE_2 =
+   |- !i. ?k. 1 <= k /\ k <= dimindex(:N) /\
+             (!x:A^N. x$i = x$k) /\ (!y:B^N. y$i = y$k)
+
+Thu 19th Jan 2012       Library/card.ml
+
+Generalized COUNTABLE_PRODUCT_DEPENDENT to have the same form as
+FINITE_PRODUCT_DEPENDENT instead of being tied specifically to pairs.
+
+Sat 14th Jan 2012       sets.ml
+
+Added "localized" forms of the theorems about factoring functions through
+each other:
+
+  FUNCTION_FACTORS_LEFT_GEN =
+    |- !P f g. (!x y. P x /\ P y /\ g x = g y ==> f x = f y) <=>
+               (?h. !x. P x ==> f(x) = h(g x))
+
+  FUNCTION_FACTORS_RIGHT_GEN =
+    |- !P f g. (!x. P x ==> ?y. g(y) = f(x)) <=>
+               (?h. !x. P x ==> f(x) = g(h x))
+
+Mon  9th Jan 2012       list.ml
+
+Added two new list theorems
+
+ MAP_REVERSE = |- !f l. REVERSE(MAP f l) = MAP f (REVERSE l)
+
+ ALL_FILTER = |- !P Q l. ALL P (FILTER Q l) <=> ALL (\x. Q x ==> P x) l
+
+Thu 23rd Dec 2011       Library/card.ml
+
+Added CARD_LE_UNIV = |- !s:A->bool. s <=_c (:A)
+
+Wed 22nd Dec 2012       sets.ml, iterate.ml, define.ml, Library/permutations.ml, Library/products.ml, Library/iter.ml, Multivariate/ passim
+
+Did a bit of cleaning up of theorems to remove redundant quantifiers (put there
+by accident for variables that aren't free in the body). This includes the
+following and numerous theorems in the Multivariate theories:
+
+========= sets.ml ============
+        SIMPLE_IMAGE_GEN
+        HAS_SIZE_0
+========= iterate.ml ============
+        NSUM_BOUND_GEN
+        NSUM_BOUND_LT_GEN
+        NSUM_EQ_0_NUMSEG
+        SUM_BOUND_GEN
+        SUM_BOUND_LT_GEN
+        SUM_EQ_0_NUMSEG
+========= define.ml ============
+        ADMISSIBLE_MATCH
+========= Library/permutations.ml ============
+        PERMUTES_COMPOSE
+========= Library/products.ml ============
+        PRODUCT_EQ_1_NUMSEG
+========= Library/iter.ml ============
+        ITER_ALT_POINTLESS
+
+Sun 18th Dec 2012       cart.ml
+
+Added a convenient set elimination theorem for pasted vectors:
+
+  IN_ELIM_PASTECART_THM =
+    |- !P a b. pastecart a b IN {pastecart x y | P x y} <=> P a b
+
+Thu  1st Dec 2012       Library/card.ml
+
+Added a few more theorems on cardinality of list and cartesian product types
+and also the cardinality and uncountability of the reals. This last fact is
+done in a primitive way to avoid depending on the analytical theories. The
+theorem UNCOUNTABLE_REAL has been taken out of the Multivariate theories now
+in consequence.
+
+  CARD_EQ_LIST = |- INFINITE (:A) ==> (:(A)list) =_c (:A)
+
+  CARD_EQ_CART = |- INFINITE (:A) ==> (:A^N) =_c (:A)
+
+  CARD_EQ_REAL = |- (:real) =_c (:num->bool)
+
+  UNCOUNTABLE_REAL = |- ~COUNTABLE (:real)
+
+Thu  1st Dec 2012       sets.ml
+
+Moved all the definitions and basic theorems about sup and inf to the end of
+this file from Multivariate/misc.ml:
+
+   inf =
+    |- !s. inf s =
+           (@a. (!x. x IN s ==> a <= x) /\
+                (!b. (!x. x IN s ==> b <= x) ==> b <= a))
+
+   sup =
+    |- !s. sup s =
+           (@a. (!x. x IN s ==> x <= a) /\
+                (!b. (!x. x IN s ==> x <= b) ==> a <= b)))]
+
+   INF =
+    |- !s. ~(s = {}) /\ (?b. !x. x IN s ==> b <= x)
+           ==> (!x. x IN s ==> inf s <= x) /\
+               (!b. (!x. x IN s ==> b <= x) ==> b <= inf s)
+
+   INF_FINITE =
+    |- !s. FINITE s /\ ~(s = {})
+           ==> inf s IN s /\ (!x. x IN s ==> inf s <= x)
+
+   INF_FINITE_LEMMA =
+    |- !s. FINITE s /\ ~(s = {}) ==> (?b. b IN s /\ (!x. x IN s ==> b <= x))
+
+   INF_INSERT_FINITE =
+    |- !x s.
+           FINITE s
+           ==> inf (x INSERT s) = (if s = {} then x else min x (inf s))
+
+   INF_UNIQUE_FINITE =
+    |- !s. FINITE s /\ ~(s = {})
+           ==> (inf s = a <=> a IN s /\ (!y. y IN s ==> a <= y))
+
+   REAL_ABS_INF_LE =
+    |- !s a. ~(s = {}) /\ (!x. x IN s ==> abs x <= a) ==> abs (inf s) <= a
+
+   REAL_ABS_SUP_LE =
+    |- !s a. ~(s = {}) /\ (!x. x IN s ==> abs x <= a) ==> abs (sup s) <= a
+
+   REAL_INF_ASCLOSE =
+    |- !s l e.
+           ~(s = {}) /\ (!x. x IN s ==> abs (x - l) <= e)
+           ==> abs (inf s - l) <= e
+
+   REAL_INF_BOUNDS =
+    |- !s a b.
+           ~(s = {}) /\ (!x. x IN s ==> a <= x /\ x <= b)
+           ==> a <= inf s /\ inf s <= b
+
+   REAL_INF_LE_FINITE =
+    |- !s a.
+           FINITE s /\ ~(s = {}) ==> (inf s <= a <=> (?x. x IN s /\ x <= a))
+
+   REAL_INF_LT_FINITE =
+    |- !s a. FINITE s /\ ~(s = {}) ==> (inf s < a <=> (?x. x IN s /\ x < a))
+
+   REAL_INF_UNIQUE =
+    |- !s b.
+           (!x. x IN s ==> b <= x) /\
+           (!b'. b < b' ==> (?x. x IN s /\ x < b'))
+           ==> inf s = b
+
+   REAL_LE_INF =
+    |- !b. ~(s = {}) /\ (!x. x IN s ==> b <= x) ==> b <= inf s
+
+   REAL_LE_INF_FINITE =
+    |- !s a.
+           FINITE s /\ ~(s = {}) ==> (a <= inf s <=> (!x. x IN s ==> a <= x))
+
+   REAL_LE_INF_SUBSET =
+    |- !s t.
+           ~(t = {}) /\ t SUBSET s /\ (?b. !x. x IN s ==> b <= x)
+           ==> inf s <= inf t
+
+   REAL_LE_SUP_FINITE =
+    |- !s a.
+           FINITE s /\ ~(s = {}) ==> (a <= sup s <=> (?x. x IN s /\ a <= x))
+
+   REAL_LT_INF_FINITE =
+    |- !s a. FINITE s /\ ~(s = {}) ==> (a < inf s <=> (!x. x IN s ==> a < x))
+
+   REAL_LT_SUP_FINITE =
+    |- !s a. FINITE s /\ ~(s = {}) ==> (a < sup s <=> (?x. x IN s /\ a < x))
+
+   REAL_SUP_ASCLOSE =
+    |- !s l e.
+           ~(s = {}) /\ (!x. x IN s ==> abs (x - l) <= e)
+           ==> abs (sup s - l) <= e
+
+   REAL_SUP_BOUNDS =
+    |- !s a b.
+           ~(s = {}) /\ (!x. x IN s ==> a <= x /\ x <= b)
+           ==> a <= sup s /\ sup s <= b
+
+   REAL_SUP_EQ_INF =
+    |- !s. ~(s = {}) /\ (?B. !x. x IN s ==> abs x <= B)
+           ==> (sup s = inf s <=> (?a. s = {a}))
+
+   REAL_SUP_LE =
+    |- !b. ~(s = {}) /\ (!x. x IN s ==> x <= b) ==> sup s <= b
+
+   REAL_SUP_LE_FINITE =
+    |- !s a.
+           FINITE s /\ ~(s = {}) ==> (sup s <= a <=> (!x. x IN s ==> x <= a))
+
+   REAL_SUP_LE_SUBSET =
+    |- !s t.
+           ~(s = {}) /\ s SUBSET t /\ (?b. !x. x IN t ==> x <= b)
+           ==> sup s <= sup t
+
+   REAL_SUP_LT_FINITE =
+    |- !s a. FINITE s /\ ~(s = {}) ==> (sup s < a <=> (!x. x IN s ==> x < a))
+
+   REAL_SUP_UNIQUE =
+    |- !s b.
+           (!x. x IN s ==> x <= b) /\
+           (!b'. b' < b ==> (?x. x IN s /\ b' < x))
+           ==> sup s = b
+
+   SUP =
+    |- !s. ~(s = {}) /\ (?b. !x. x IN s ==> x <= b)
+           ==> (!x. x IN s ==> x <= sup s) /\
+               (!b. (!x. x IN s ==> x <= b) ==> sup s <= b)
+
+   SUP_FINITE =
+    |- !s. FINITE s /\ ~(s = {})
+           ==> sup s IN s /\ (!x. x IN s ==> x <= sup s)
+
+   SUP_FINITE_LEMMA =
+    |- !s. FINITE s /\ ~(s = {}) ==> (?b. b IN s /\ (!x. x IN s ==> x <= b))
+
+   SUP_INSERT_FINITE =
+    |- !x s.
+           FINITE s
+           ==> sup (x INSERT s) = (if s = {} then x else max x (sup s))
+
+   SUP_UNIQUE_FINITE =
+    |- !s. FINITE s /\ ~(s = {})
+           ==> (sup s = a <=> a IN s /\ (!y. y IN s ==> y <= a))
+
+Thu  1st Dec 2012       real.ml
+
+Moved three basic Archimedian properties back to here from
+Multivariate/misc.ml:
+
+  REAL_ARCH_SIMPLE = |- !x. ?n. x <= &n
+
+  REAL_ARCH_LT = |- !x. ?n. x < &n
+
+  REAL_ARCH = |- !x. &0 < x ==> (!y. ?n. y < &n * x)
+
+Thu  1st Dec 2012       list.ml
+
+Added EL_MAP = |- !f n l. n < LENGTH l ==> EL n (MAP f l) = f (EL n l)
+
+Mon 21st Nov 2012       iterate.ml
+
+Added a few lemmas about the behaviour of real polynomial functions, since
+these are quite often useful:
+
+ REAL_SUB_POLYFUN =
+  |- !a x y n.
+         1 <= n
+         ==> sum(0..n) (\i. a i * x pow i) - sum(0..n) (\i. a i * y pow i) =
+             (x - y) *
+             sum(0..n - 1)
+             (\j. sum(j + 1..n) (\i. a i * y pow (i - j - 1)) * x pow j)
+
+ REAL_SUB_POLYFUN_ALT =
+  |- !a x y n.
+         1 <= n
+         ==> sum(0..n) (\i. a i * x pow i) - sum(0..n) (\i. a i * y pow i) =
+             (x - y) *
+             sum(0..n - 1)
+             (\j. sum(0..n - j - 1) (\k. a (j + k + 1) * y pow k) * x pow j)
+
+ REAL_POLYFUN_ROOTBOUND =
+  |- !n c.
+         ~(!i. i IN 0..n ==> c i = &0)
+         ==> FINITE {x | sum(0..n) (\i. c i * x pow i) = &0} /\
+             CARD {x | sum(0..n) (\i. c i * x pow i) = &0} <= n
+
+ REAL_POLYFUN_FINITE_ROOTS =
+  |- !n c.
+
+         FINITE {x | sum(0..n) (\i. c i * x pow i) = &0} <=>
+         (?i. i IN 0..n /\ ~(c i = &0))
+
+ REAL_POLYFUN_EQ_0 =
+  |- !n c.
+         (!x. sum(0..n) (\i. c i * x pow i) = &0) <=>
+         (!i. i IN 0..n ==> c i = &0)
+
+ REAL_POLYFUN_EQ_CONST =
+  |- !n c k.
+         (!x. sum(0..n) (\i. c i * x pow i) = k) <=>
+         c 0 = k /\ (!i. i IN 1..n ==> c i = &0)
+
+Thu  3rd Nov 2012       arith.ml
+
+Added another somewhat intricate DIV/MOD theorem:
+
+ MOD_MOD_EXP_MIN =
+   |- !x p m n. ~(p = 0) ==> x MOD p EXP m MOD p EXP n = x MOD p EXP MIN m n
+
+Tue  1st Nov 2012       arith.ml
+
+Added the following, a natural counterpart to MOD_MULT_ADD:
+
+  DIV_MULT_ADD = |- !a b n. ~(n = 0) ==> (a * n + b) DIV n = a + b DIV n
+
+Thu 20th Oct 2012       hol.ml, class.ml, nums.ml, arith.ml, recursion.ml, pair.ml
+
+Based on an idea discussed with Mark Adams, changed "new_specification" to
+exploit dummy quantifiers and numeral tags to avoid provable equalities between
+different constants introduced with new_specification based on the same (or a
+provably equivalent) existence theorem. Since this requires the existence of
+numerals, quite a bit of build order reshuffling was necessary, and two former
+uses of new_specification (IND_SUC/IND_0 and BIT0_DEF) are now done "manually".
+
+Fri  7th Oct 2012       Makefile
+
+Made a fix to the Makefile from Ramana Kumar on the hol-light page (see issue
+2). This uses the file  pa_j_3.1x_6.02.2.ml for version 6.03 of OCaml as well.
+I just tried it with Ocaml 3.12.1 and camlp5 6.02.3, and it seems to work fine.
+
+Mon 29th Aug 2012       calc_rat.ml
+
+Changed REAL_RAT_DIV_CONV not to fail if it is given a canonical rational;
+instead used CHANGED_CONV in the depth conversion in REAL_RAT_REDUCE_CONV. This
+is consistent with the use of REAL_RAT_NEG_CONV, makes REAL_RAT_DIV_CONV a more
+convenient building block, and agrees with the current documentation.
+
+Wed 24th Aug 2012       real.ml, int.ml
+
+Added theorems about the real and integer sign function:
+
+  REAL_SGN_CASES =
+    |- !x. real_sgn x = &0 \/ real_sgn x = &1 \/ real_sgn x = -- &1
+
+  REAL_SGN_EQ =
+    |- (!x. real_sgn x = &0 <=> x = &0) /\
+       (!x. real_sgn x = &1 <=> x > &0) /\
+       (!x. real_sgn x = -- &1 <=> x < &0)
+
+with INT_SGN_CASES and INT_SGN_EQ being the same for integers.
+
+Wed 24th Aug 2012       sets.ml
+
+Added two natural theorems about intersections of unions
+
+  INTERS_UNION =
+   |- !s t. INTERS (s UNION t) = INTERS s INTER INTERS t
+
+  INTERS_OVER_UNIONS;;
+   |- !f s.
+        INTERS {UNIONS (f x) | x IN s} =
+        UNIONS {INTERS {g x | x IN s} | g | !x. x IN s ==> g x IN f x}
+
+Thu 18th Aug 2012       100/inclusion_exclusion.ml
+
+Added versions of inclusion-exclusion for additive real functions
+(INCLUSION_EXCLUSION_REAL_RESTRICTED_INDEXED,
+INCLUSION_EXCLUSION_REAL_RESTRICTED, INCLUSION_EXCLUSION_REAL_INDEXED and
+INCLUSION_EXCLUSION_REAL), deriving the cardinality version from those. Renamed
+the old INCLUSION_EXCLUSION_REAL as INCLUSION_EXCLUSION_REAL_FUNCTION and
+commented it out together with its dependency on Library/products.ml
+
+Sun 31st Jul 2012       IsabelleLight/* [new files]
+
+Installed "Isabelle Light" from Petros Papapanagiotou and Jacques Fleuriot,
+which consists of implementations of Isabelle-style tactics and other
+user-friendly shortcuts.
+
+Sun 10th Jul 2012       100/fourier.ml [new file]
+
+Added a file with some material on L_p spaces and Fourier series.
+
+Tue 28th Jun 2012       pair.ml, parser.ml
+
+Fixed a LET_TAC bug pointed out by Vu Khac Ky: failures were occurring if the
+same variable was used on the left and right of a pattern (except if they are a
+trivial let, i.e. corresponding lefts and rights exactly equal), e.g.
+
+  g `v IN V DIFF (let k,ul = (P:num#(real^3)list->num#(real^3)list) (k,ul) in
+     (Q:num#(real^3)list->real^3->bool) (k,ul)) ==> F`;;
+  e LET_TAC;;
+
+Now the abbreviating variables are renamed as necessary to avoid clashes with
+free variables of the goal or each other (some of this would previously happen
+later in the ABBREV_TAC step anyway in some cases, but not this one).
+
+Looking at such corner cases made me add a parsing warning if there are
+multiple uses of the same variable in different arms of a simultaneous let
+binding, e.g. `let x = 1 and x = 2 in x = 42`, in which case the first one is
+hidden.
+
+Thu  9th Jun 2012       realarith.ml
+
+Made a change in the variable-choosing heuristic in Fourier-Motzkin, motivated
+by the disastrous slowness of this trivial example:
+
+  time REAL_ARITH
+  `c < e / &3 /\ i1 < e / &12 /\ i3 < e / &12 /\ i2 < e / &12 /\ i4 < e / &12
+     ==> (i1 + i2) + (c + i3 + i4) <= &2 * e / &3`;;
+
+The previous heuristic chose a variable that minimized the number of
+inequalities after elimination, which is p * n + z where p, n and z are the
+number of current inequalities where that variable occurs positively,
+negatively and not at all respectively. The downside is that it doesn't take
+any account of the complexity of the resulting inequalities, so in a
+prototypical example like the above
+
+ x1 < e /\ .... /\ xn < e ==> x1 + ... + xn < n * e
+
+all variables give equal blowup of n, and so e may get chosen from among the
+available alternatives. That's something of a disaster since from that point on
+you get doubly exponential blowup per stage. The new heuristic is simply p * n,
+counting the number of new inequalities created by the elimination step. It
+makes this sort of example, which is probably pretty common, dramatically
+better. It also seems to lead to a small but notable average speedup.
+
+Mon 23rd May 2012       Library/floor.ml, Library/sets.ml
+
+Added
+
+  COUNTABLE_RESTRICT = |- !s P. COUNTABLE s ==> COUNTABLE {x | x IN s /\ P x}
+
+  RATIONAL_APPROXIMATION_STRADDLE =
+    |- !x e. &0 < e
+             ==> ?a b. rational a /\ rational b /\
+                       a < x /\ x < b /\ abs(b - a) < e
+
+Sun 22nd May 2012       sets.ml
+
+Added the following duality for unions and intersections:
+
+  DIFF_INTERS = |- !u s. u DIFF INTERS s = UNIONS {u DIFF t | t IN s}
+
+  INTERS_UNIONS = |- !s. INTERS s = UNIV DIFF (UNIONS {UNIV DIFF t | t IN s})
+
+  UNIONS_INTERS = |- !s. UNIONS s = UNIV DIFF (INTERS {UNIV DIFF t | t IN s})
+
+Thu 12th May 2012       Library/floor.ml
+
+  FRAC_UNIQUE = |- !x a. integer(x - a) /\ &0 <= a /\ a < &1 <=> frac x = a
+
+  REAL_FRAC_EQ = |- !x. frac x = x <=> &0 <= x /\ x < &1
+
+Tue  5th Apr 2012       Library/floor.ml
+
+  REAL_FLOOR_LE =
+    |- !x n. integer n ==> (floor x <= n <=> x - &1 < n)
+
+  HAS_SIZE_INTSEG_INT =
+    |- !a b.
+           integer a /\ integer b
+           ==> {x | integer x /\ a <= x /\ x <= b} HAS_SIZE
+               (if b < a then 0 else num_of_int(int_of_real(b - a + &1)))
+
+  CARD_INTSEG_INT =
+    |- !a b.
+           integer a /\ integer b
+           ==> CARD {x | integer x /\ a <= x /\ x <= b} =
+               (if b < a then 0 else num_of_int(int_of_real(b - a + &1)))
+
+  REAL_CARD_INTSEG_INT =
+    |- !a b.
+           integer a /\ integer b
+           ==> &(CARD {x | integer x /\ a <= x /\ x <= b}) =
+               (if b < a then &0 else b - a + &1)
+
+Tue  5th Apr 2012       sets.ml
+
+Added
+
+  POWERSET_CLAUSES =
+   |- {s | s SUBSET {}} = {{}} /\
+      (!a t.
+           {s | s SUBSET a INSERT t} =
+           {s | s SUBSET t} UNION IMAGE (\s. a INSERT s) {s | s SUBSET t})
+
+Fri  1st Apr 2012       Makefile, pa_j_3.1x_6.02.2.ml [new file]
+
+Once again there is an incompatibility with the latest version of camlp5, this
+time 6.02.2, as was reported by Kevin S. Van Horn. Made yet another appropriate
+version of pa_j.ml, and put another case split in the Makefile.
+
+Fri  1st Apr 2012       Minisat/minisat_parse.ml
+
+Rewrote readTrace_aux in a slightly different style, avoiding wrapping
+an exception handler round the recursive calls, since this had the effect of
+making it not be tail-recursive.
+
+Thu 31st Mar 2012       sets.ml
+
+Added the following
+
+  IMAGE_INJECTIVE_IMAGE_OF_SUBSET =
+   |- !f s.
+         ?t. t SUBSET s /\
+             IMAGE f s = IMAGE f t /\
+             (!x y. x IN t /\ y IN t /\ f x = f y ==> x = y)
+
+Tue 22nd Mar 2012       sets.ml
+
+Added the following, a natural dual of EXISTS_SUBSET_IMAGE:
+
+  FORALL_SUBSET_IMAGE =
+   |- !P f s.
+          (!t. t SUBSET IMAGE f s ==> P t) <=>
+          (!t. t SUBSET s ==> P (IMAGE f t))
+
+Tue 15th Mar 2012       fusion.ml
+
+Made a small but significant change to the kernel, based on an observation by
+Ondrej Kuncar, optimizing the pointer-EQ shortcut in "orda" so that it does not
+require an empty environment but merely one full of identical pairs. This can
+substantially speed up many derived rules by allowing efficient use of
+proformas even inside bound variables.
+
+Sat  5th Mar 2012       bool.ml
+
+Noticed that GEN is not constant-time, which is bad. On closer inspection the
+problem was that the abstraction that's used to instantiate the proforma is
+created separately from the abstracted input theorem, so the pointer-EQ
+subterms are hidden under an abstraction. As well as fixing that, made it more
+efficient in two other ways: used EQ_MP instead of PROVE_HYP, and added partial
+evaluation based on the first argument.
+
+Fri 25th Feb 2012       Library/poly.ml
+
+Fixed an error where override_interface was used for "divides", hiding
+all the other desired overloadings. Also added many new polynomial
+theorems from Jesse Bingham's e-transcendence proof:
+
+  HD_POLY_ADD
+  HD_POLY_CMUL
+  HD_POLY_EXP
+  HD_POLY_EXP_X_SUC
+  HD_POLY_MUL
+  HD_POLY_MUL_X
+  ITERATE_RADD_POLYADD
+  MONOIDAL_POLY_ADD
+  NOT_POLY_CMUL_NIL
+  NOT_POLY_EXP_NIL
+  NOT_POLY_EXP_X_NIL
+  NOT_POLY_MUL_NIL
+  POLYDIFF_ADD
+  POLY_ADD_ASSOC
+  POLY_ADD_IDENT
+  POLY_ADD_LENGTH
+  POLY_ADD_NEUTRAL
+  POLY_ADD_SYM
+  POLY_CMUL_LENGTH
+  POLY_CMUL_LID
+  POLY_CMUL_POLY_DIFF
+  POLY_DIFF_AUX_ADD_LEMMA
+  POLY_DIFF_AUX_POLY_CMUL
+  POLY_EXP_X_LENGTH
+  POLY_EXP_X_REC
+  POLY_MUL_LENGTH
+  POLY_MUL_LENGTH2
+  POLY_MUL_LID
+  POLY_MUL_RID
+  POLY_SUM_EQUIV
+  TL_POLY_CMUL
+  TL_POLY_EXP_X_SUC
+  TL_POLY_MUL_X
+
+Fri 25th Feb 2012       fusion.ml, ind_defs.ml, simp.ml, define.ml, Library/analysis.ml, Library/transc.ml
+
+Removed a few unused variables in these files, after noticing OCaml warnings
+about them. It makes things minutely smaller and faster, I suppose.
+
+Tue 22nd Feb 2012       lists.ml
+
+Added two additional list lemmas taken from Jesse Bingham's e-transcendence
+proof, which seem to be quite generally useful.
+
+  ALL_EL = |- !P l. (!i. i < LENGTH l ==> P (EL i l)) <=> ALL P l
+
+  CONS_HD_TL = |- !l. ~(l = []) ==> l = CONS (HD l) (TL l)
+
+Thu 17th Feb 2012       Examples/sos.ml
+
+Renamed a few of the ML operations on vectors since the existing names
+can lead to annoying name clashes with the names of theorems in the
+Multivariate/vectors.ml theories.
+
+ vector_0       -> vec_0
+ dim            -> vec_dim
+ vector_const   -> vec_const
+ vector_1       -> vec_1
+ vector_cmul    -> vec_cmul
+ vector_neg     -> vec_neg
+ vector_add     -> vec_add
+ vector_sub     -> vec_sub
+ vector_dot     -> vec_dot
+ vector_of_list -> vec_of_list
+
+Of course, it is arguable that all this should be hidden anyway, but
+since this file is still somewhat experimental I don't want to tidy up
+and modularize the namespace just yet.
+
+Mon 14th Feb 2012       int.ml, Library/floor.ml
+
+Removed the constant "is_int" and replaced it with "integer", moving the
+definition of that back from the "Library/floor.ml" file to the "int.ml"
+file. Kept the theorem "is_int" for compatibility, with just the different
+constant, and removed the now redundant/meaningless INTEGER_IS_INT.
+
+Tue  8th Feb 2012       Makefile, pa_j_3.1x_6.02.1.ml [new file]
+
+Added (directly from Ondrej Kuncar) an updated version of pa_j for the latest
+sub-version of camlp5, and modified the Makefile to use it as needed (though
+this selection logic is starting to get ugly).
+
+Tue 21st Dec 2010       real.ml, database.ml
+
+Added a lemma from Valentina Bruno used in the Multivariate complex analysis
+theories, plus other variants.
+
+  REAL_LT_LINV  = |- !x y. &0 < y /\ inv y < x ==> inv x < y
+  REAL_LT_RINV  = |- !x y. &0 < x /\ x < inv y ==> y < inv x
+  REAL_LE_LINV  = |- !x y. &0 < y /\ inv y <= x ==> inv x <= y
+  REAL_LE_RINV  = |- !x y. &0 < x /\ x <= inv y ==> y <= inv x
+
+Wed 15th Dec 2010       system.ml
+
+At the suggestion of Ondrej Kuncar, switched from
+
+  fun set_jrh_lexer -> set_jrh_lexer;;
+
+to just
+
+  set_jrh_lexer;;
+
+This magic variable gets mapped to a constant anyway, so there is no need for
+this elaborate expression, which moreover generates a warning about
+a non-exhaustive match.
+
+Mon 13th Dec 2010       sets.ml
+
+Added SET_PAIR_THM = |- !P. {p | P p} = {a,b | P (a,b)}
+
+Thu  2nd Dec 2010       Makefile, Proofrecording/hol_light/Makefile, pa_j_3.1x_5.xx.ml [new file], pa_j_3.1x_6.xx.ml [new file], pa_j_3.10.ml [deleted], pa_j_3.11.ml [deleted]
+
+Ondrej Kuncar pointed out that the system doesn't build with the new camlp5
+6.0. So now for OCaml >= 3.10 I need to start distinguishing only based on
+the camlp5 version. Modified the Makefile accordingly, making the two current
+versions for < 6.0 and >= 6.0 of camlp5 called pa_j_3.1x_5.xx.ml (what used
+to be pa_j_3.10.ml and pa_j_3.11.ml) and pa_j_3.1x_6.xx.ml (a new one derived
+by modifying the source to camlp5 6.02.0).
+
+Thu 18th Nov 2010       real.ml
+
+Finally added the theorem REAL_LE_POW_2 = |- !x. &0 <= x pow 2.
+Even though REAL_LE_SQUARE is close, it's nice not to have to make
+trivial rewrites back and forth just to use it.
+
+Thu 28th Oct 2010       Library/rstc.ml
+
+Noticed that the theorems RTC_INDUCT_L and RTC_INDUCT_R both had the hypothesis
+(!x y. R x y ==> P x y), which is redundant since it follows from the other
+two. So I just removed it; as far as I can see there are no proof changes
+needed.
+
+Thu 28th Oct 2010       arith.ml, passim
+
+Joe Hurd pointed out that EQ_SUC proved in arith.ml was just a duplicate of the
+theorem SUC_INJ from nums.ml, so I removed its proof and replaced EQ_SUC by
+SUC_INJ everywhere it was used.
+
+Fri  8th Oct 2010       README
+
+Updated the README file with a few modernizations, in particular a more careful
+discussion of checkpointing options in the light of the fact that it seems hard
+to get ckpt working on recent Linuxes.
+
+Fri  8th Oct 2010       theorems.ml
+
+Joe Hurd pointed out that EQ_REFL_T is a duplicate of REFL_CLAUSE, so I removed
+EQ_REFL_T.
+
+Fri  8th Oct 2010       Makefile, hol.ml
+
+There was a problem pointed out by Anthony V. Pulido with OCaml 3.12 because
+a couple of tests had equality tests for 3.10 or 3.11. Replaced this with a
+simple test of the first digit after the decimal point of the OCaml version in
+the Makefile and a string inequality comparison in "hol.ml".
+
+Wed  9th Jun 2010       nums.ml, arith.ml
+
+Made some changes suggested by Joe Hurd to allow cleaner separation into
+theories by avoiding the use of addition when defining the numeral constants
+BIT0 and BIT1. Now those are defined directly using primitive recursion
+(BIT0_DEF and BIT1_DEF) and the former definitions BIT0 and BIT1 are derived
+from those later.
+
+Wed 24th Mar 2010       nums.ml, 100/four_squares.ml, 100/ramsey.ml, Complex/complexnumbers.ml, Examples/mccarthy.ml, Examples/multiwf.ml, Mizarlight/duality_holby.ml, Model/modelset.ml, Multivariate/clifford.ml, Multivariate/topology.ml, Rqe/asym.ml, Rqe/examples.ml, Rqe/rol.ml
+
+Made changes essentially corresponding to the steps of hol-online's
+"hol-preparse-patch", fixing some bugs, removing redundant material
+and regularizing some syntax:
+
+      * Replaced a = by <=> in "100/four_squares.ml" (I'd left this
+        out of my test suite, which is why it hadn't been spotted
+        before).
+
+      * Added a couple of missing real numeral coercions "&" in
+        "Rqe/examples.ml".
+
+      * Removed duplicate definition for degree in "Rqe/asym.ml"
+        (it's already defined in "Library/poly.ml").
+
+      * Removed terms with antiquotation, an unused relic from HOL88
+        in "100/ramsey.ml".
+
+      * Avoided programmatically created terms in
+        "Examples/mccarthy.ml", "Mizarlight/duality_holby.ml" and
+        "Rqe/rol.ml".
+
+      * Added IND_SUC_SPEC to regularize new_specification syntax in
+        "nums.ml"
+
+      * Stylistic change to type definition in
+        "Complex/complexnumbers.ml", "Examples/multiwf.ml",
+        "Mizarlight/duality_holby.ml", "Model/modelset.ml",
+        "Multivariate/clifford.ml", "Multivariate/topology.ml".
+
+Tue 23rd Mar 2010       lists.ml
+
+Added several miscellaneous lemmas about lists:
+
+  LENGTH_TL =
+   |- !l. ~(l = []) ==> LENGTH (TL l) = LENGTH l - 1
+
+  EL_APPEND =
+   |- !k l m.
+         EL k (APPEND l m) =
+         (if k < LENGTH l then EL k l else EL (k - LENGTH l) m)
+
+  EL_TL =
+   |- !n. EL n (TL l) = EL (n + 1) l
+
+  EL_CONS =
+   |- !n h t. EL n (CONS h t) = (if n = 0 then h else EL (n - 1) t)
+
+  LAST_EL =
+   |- !l. ~(l = []) ==> LAST l = EL (LENGTH l - 1) l
+
+  HD_APPEND =
+   |- !l m. HD (APPEND l m) = (if l = [] then HD m else HD l)
+
+Tue 23rd Mar 2010       sets.ml
+
+Added SET_OF_LIST_EQ_EMPTY = |- !l. set_of_list l = {} <=> l = []
+
+Mon 22nd Mar 2010       lists.ml
+
+Added one more simple list lemma:
+
+  LAST_APPEND =
+    |- !p q. LAST(APPEND p q) = (if q = [] then LAST p else LAST q)
+
+Sat 20th Mar 2010       lists.ml, Rqe/work_thms.ml
+
+Moved the definition of BUTLAST from Rqe into the core, and added one trivial
+theorem about it:
+
+  BUTLAST =
+    |- BUTLAST [] = [] /\
+       BUTLAST (CONS h t) = (if t = [] then [] else CONS h (BUTLAST t))
+
+  APPEND_BUTLAST_LAST =
+    |- !l. ~(l = []) ==> APPEND (BUTLAST l) [LAST l] = l
+
+Fri 12th Mar 2010       sets.ml
+
+Added
+
+  CHOOSE_SUBSET_STRONG =
+    |- !n s. (FINITE s ==> n <= CARD s) ==> (?t. t SUBSET s /\ t HAS_SIZE n)
+
+Thu 11th Mar 2010       ints.ml
+
+Made a further small stylistic change following hol-online to make the integer
+type bijection at the top level instead of hiding it. This introduces a new
+theorem int_tybij.
+
+Tue  9th Mar 2010       lists.ml
+
+Added a couple of trivial lemmas about MAP:
+
+  MAP_ID = |- !l. MAP (\x. x) l = l
+
+  MAP_I = |- MAP I = I
+
+Mon  8th Mar 2010       bool.ml, ind_types.ml, cart.ml, int.ml, realax.ml
+
+Made minor stylistic changes following hol-online. These essentially make it
+easier to recognize parsing directives and definitions.
+
+Mon  8th Mar 2010       Proofrecording/diffs/basics.ml [new file]
+
+Chantal Keller pointed out that the "needs" directive is wrong in the
+proof-recording version where separate type, term and theorem files are used in
+place of fusion. Fixed this by putting the version of basics.ml without the
+"needs" line in the diffs directory.
+
 Sun  7th Mar 2010       passim
 
 Moved more hol-online changes upstream, adding explicit "needs" directives to

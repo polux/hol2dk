@@ -950,7 +950,7 @@ let NSUM_BOUND = prove
   SIMP_TAC[GSYM NSUM_CONST; NSUM_LE]);;
 
 let NSUM_BOUND_GEN = prove
- (`!s t b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) <= b DIV (CARD s))
+ (`!s f b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) <= b DIV (CARD s))
            ==> nsum s f <= b`,
   SIMP_TAC[IMP_CONJ; CARD_EQ_0; LE_RDIV_EQ] THEN REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `nsum s (\x. CARD(s:A->bool) * f x) <= CARD s * b` MP_TAC THENL
@@ -971,7 +971,7 @@ let NSUM_BOUND_LT_ALL = prove
   MESON_TAC[MEMBER_NOT_EMPTY; LT_IMP_LE; NSUM_BOUND_LT]);;
 
 let NSUM_BOUND_LT_GEN = prove
- (`!s t b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) < b DIV (CARD s))
+ (`!s f b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) < b DIV (CARD s))
            ==> nsum s f < b`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LTE_TRANS THEN
   EXISTS_TAC `nsum (s:A->bool) (\a. f(a) + 1)` THEN CONJ_TAC THENL
@@ -1188,7 +1188,7 @@ let NSUM_CONST_NUMSEG = prove
   SIMP_TAC[NSUM_CONST; FINITE_NUMSEG; CARD_NUMSEG]);;
 
 let NSUM_EQ_0_NUMSEG = prove
- (`!f s. (!i. m <= i /\ i <= n ==> (f(i) = 0)) ==> (nsum(m..n) f = 0)`,
+ (`!f m n. (!i. m <= i /\ i <= n ==> (f(i) = 0)) ==> (nsum(m..n) f = 0)`,
   SIMP_TAC[NSUM_EQ_0; IN_NUMSEG]);;
 
 let NSUM_EQ_0_IFF_NUMSEG = prove
@@ -1245,6 +1245,25 @@ let NSUM_PAIR = prove
  (`!f m n. nsum(2*m..2*n+1) f = nsum(m..n) (\i. f(2*i) + f(2*i+1))`,
   MP_TAC(MATCH_MP ITERATE_PAIR MONOIDAL_ADD) THEN
   REWRITE_TAC[nsum; NEUTRAL_ADD]);;
+
+let MOD_NSUM_MOD = prove
+ (`!f:A->num n s.
+        FINITE s /\ ~(n = 0)
+        ==> (nsum s f) MOD n = nsum s (\i. f(i) MOD n) MOD n`,
+  GEN_TAC THEN GEN_TAC THEN
+  ASM_CASES_TAC `n = 0` THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC FINITE_INDUCT_STRONG THEN SIMP_TAC[NSUM_CLAUSES] THEN
+  REPEAT STRIP_TAC THEN
+  W(MP_TAC o PART_MATCH (rand o rand) MOD_ADD_MOD o lhand o snd) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+  W(MP_TAC o PART_MATCH (rand o rand) MOD_ADD_MOD o rand o snd) THEN
+  ASM_SIMP_TAC[MOD_MOD_REFL]);;
+
+let MOD_NSUM_MOD_NUMSEG = prove
+ (`!f a b n.
+        ~(n = 0)
+        ==> (nsum(a..b) f) MOD n = nsum(a..b) (\i. f i MOD n) MOD n`,
+  MESON_TAC[MOD_NSUM_MOD; FINITE_NUMSEG]);;
 
 let th = prove
  (`(!f g s.   (!x. x IN s ==> f(x) = g(x))
@@ -1529,7 +1548,7 @@ let SUM_BOUND = prove
   SIMP_TAC[GSYM SUM_CONST; SUM_LE]);;
 
 let SUM_BOUND_GEN = prove
- (`!s t b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) <= b / &(CARD s))
+ (`!s f b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) <= b / &(CARD s))
            ==> sum s f <= b`,
   MESON_TAC[SUM_BOUND; REAL_DIV_LMUL; REAL_OF_NUM_EQ; HAS_SIZE_0;
             HAS_SIZE]);;
@@ -1555,7 +1574,7 @@ let SUM_BOUND_LT_ALL = prove
   MESON_TAC[MEMBER_NOT_EMPTY; REAL_LT_IMP_LE; SUM_BOUND_LT]);;
 
 let SUM_BOUND_LT_GEN = prove
- (`!s t b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) < b / &(CARD s))
+ (`!s f b. FINITE s /\ ~(s = {}) /\ (!x:A. x IN s ==> f(x) < b / &(CARD s))
            ==> sum s f < b`,
   MESON_TAC[SUM_BOUND_LT_ALL; REAL_DIV_LMUL; REAL_OF_NUM_EQ; HAS_SIZE_0;
             HAS_SIZE]);;
@@ -1839,7 +1858,7 @@ let SUM_CONST_NUMSEG = prove
   SIMP_TAC[SUM_CONST; FINITE_NUMSEG; CARD_NUMSEG]);;
 
 let SUM_EQ_0_NUMSEG = prove
- (`!f s. (!i. m <= i /\ i <= n ==> (f(i) = &0)) ==> (sum(m..n) f = &0)`,
+ (`!f m n. (!i. m <= i /\ i <= n ==> (f(i) = &0)) ==> (sum(m..n) f = &0)`,
   SIMP_TAC[SUM_EQ_0; IN_NUMSEG]);;
 
 let SUM_TRIV_NUMSEG = prove
@@ -2013,6 +2032,114 @@ let REAL_SUB_POW_L1 = prove
  (`!x n. 1 <= n ==> &1 - x pow n = (&1 - x) * sum(0..n-1) (\i. x pow i)`,
   ONCE_REWRITE_TAC[GSYM REAL_NEG_SUB] THEN
   SIMP_TAC[REAL_SUB_POW_R1] THEN REWRITE_TAC[REAL_MUL_LNEG]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Some useful facts about real polynomial functions.                        *)
+(* ------------------------------------------------------------------------- *)
+
+let REAL_SUB_POLYFUN = prove
+ (`!a x y n.
+    1 <= n
+    ==> sum(0..n) (\i. a i * x pow i) - sum(0..n) (\i. a i * y pow i) =
+        (x - y) *
+        sum(0..n-1) (\j. sum(j+1..n) (\i. a i * y pow (i - j - 1)) * x pow j)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM SUM_SUB_NUMSEG; GSYM REAL_SUB_LDISTRIB] THEN
+  GEN_REWRITE_TAC LAND_CONV [MATCH_MP SUM_CLAUSES_LEFT (SPEC_ALL LE_0)] THEN
+  REWRITE_TAC[REAL_SUB_REFL; real_pow; REAL_MUL_RZERO; REAL_ADD_LID] THEN
+  SIMP_TAC[REAL_SUB_POW; ADD_CLAUSES] THEN
+  ONCE_REWRITE_TAC[REAL_ARITH `a * x * s:real = x * a * s`] THEN
+  REWRITE_TAC[SUM_LMUL] THEN AP_TERM_TAC THEN
+  SIMP_TAC[GSYM SUM_LMUL; GSYM SUM_RMUL; SUM_SUM_PRODUCT; FINITE_NUMSEG] THEN
+  MATCH_MP_TAC SUM_EQ_GENERAL_INVERSES THEN
+  REPEAT(EXISTS_TAC `\(x:num,y:num). (y,x)`) THEN
+  REWRITE_TAC[FORALL_IN_GSPEC; IN_ELIM_PAIR_THM; IN_NUMSEG] THEN
+  REWRITE_TAC[ARITH_RULE `a - b - c:num = a - (b + c)`; ADD_SYM] THEN
+  REWRITE_TAC[REAL_MUL_AC] THEN ARITH_TAC);;
+
+let REAL_SUB_POLYFUN_ALT = prove
+ (`!a x y n.
+    1 <= n
+    ==> sum(0..n) (\i. a i * x pow i) - sum(0..n) (\i. a i * y pow i) =
+        (x - y) *
+        sum(0..n-1) (\j. sum(0..n-j-1) (\k. a(j+k+1) * y pow k) * x pow j)`,
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[REAL_SUB_POLYFUN] THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC SUM_EQ_NUMSEG THEN X_GEN_TAC `j:num` THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+  MATCH_MP_TAC SUM_EQ_GENERAL_INVERSES THEN
+  MAP_EVERY EXISTS_TAC
+   [`\i. i - (j + 1)`; `\k. j + k + 1`] THEN
+  REWRITE_TAC[IN_NUMSEG] THEN REPEAT STRIP_TAC THEN
+  TRY(BINOP_TAC THEN AP_TERM_TAC) THEN ASM_ARITH_TAC);;
+
+let REAL_POLYFUN_ROOTBOUND = prove
+ (`!n c. ~(!i. i IN 0..n ==> c i = &0)
+         ==> FINITE {x | sum(0..n) (\i. c i * x pow i) = &0} /\
+             CARD {x | sum(0..n) (\i. c i * x pow i) = &0} <= n`,
+  REWRITE_TAC[NOT_FORALL_THM; NOT_IMP] THEN INDUCT_TAC THENL
+   [REWRITE_TAC[NUMSEG_SING; IN_SING; UNWIND_THM2; SUM_CLAUSES_NUMSEG] THEN
+    SIMP_TAC[real_pow; REAL_MUL_RID; EMPTY_GSPEC; CARD_CLAUSES; FINITE_EMPTY;
+             LE_REFL];
+    X_GEN_TAC `c:num->real` THEN REWRITE_TAC[IN_NUMSEG] THEN
+    DISCH_TAC THEN ASM_CASES_TAC `(c:num->real) (SUC n) = &0` THENL
+     [ASM_SIMP_TAC[SUM_CLAUSES_NUMSEG; LE_0; REAL_MUL_LZERO; REAL_ADD_RID] THEN
+      REWRITE_TAC[LE; LEFT_OR_DISTRIB] THEN DISJ2_TAC THEN
+      FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_MESON_TAC[IN_NUMSEG; LE];
+      ASM_CASES_TAC `{x | sum (0..SUC n) (\i. c i * x pow i) = &0} = {}` THEN
+      ASM_REWRITE_TAC[FINITE_RULES; CARD_CLAUSES; LE_0] THEN
+      FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [GSYM MEMBER_NOT_EMPTY]) THEN
+      REWRITE_TAC[IN_ELIM_THM; LEFT_IMP_EXISTS_THM] THEN
+      X_GEN_TAC `r:real` THEN DISCH_TAC THEN
+      MP_TAC(GEN `x:real` (ISPECL [`c:num->real`; `x:real`; `r:real`; `SUC n`]
+        REAL_SUB_POLYFUN)) THEN
+      ASM_REWRITE_TAC[ARITH_RULE `1 <= SUC n`; REAL_SUB_RZERO] THEN
+      DISCH_THEN(fun th -> REWRITE_TAC[th; REAL_ENTIRE; REAL_SUB_0]) THEN
+      REWRITE_TAC[SET_RULE `{x | x = c \/ P x} = c INSERT {x | P x}`] THEN
+      MATCH_MP_TAC(MESON[FINITE_INSERT; CARD_CLAUSES;
+                         ARITH_RULE `x <= n ==> SUC x <= SUC n /\ x <= SUC n`]
+        `FINITE s /\ CARD s <= n
+         ==> FINITE(r INSERT s) /\ CARD(r INSERT s) <= SUC n`) THEN
+      REWRITE_TAC[SUC_SUB1] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+      EXISTS_TAC `n:num` THEN REWRITE_TAC[IN_NUMSEG; ADD1; LE_REFL; LE_0] THEN
+      REWRITE_TAC[SUM_SING_NUMSEG; ARITH_RULE `(n + 1) - n - 1 = 0`] THEN
+      ASM_REWRITE_TAC[GSYM ADD1; real_pow; REAL_MUL_RID]]]);;
+
+let REAL_POLYFUN_FINITE_ROOTS = prove
+ (`!n c. FINITE {x | sum(0..n) (\i. c i * x pow i) = &0} <=>
+         ?i. i IN 0..n /\ ~(c i = &0)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[TAUT `a /\ ~b <=> ~(a ==> b)`] THEN
+  REWRITE_TAC[GSYM NOT_FORALL_THM] THEN EQ_TAC THEN
+  SIMP_TAC[REAL_POLYFUN_ROOTBOUND] THEN
+  ONCE_REWRITE_TAC[GSYM CONTRAPOS_THM] THEN
+  SIMP_TAC[REAL_MUL_LZERO; SUM_0] THEN
+  REWRITE_TAC[SET_RULE `{x | T} = (:real)`; real_INFINITE; GSYM INFINITE]);;
+
+let REAL_POLYFUN_EQ_0 = prove
+ (`!n c. (!x. sum(0..n) (\i. c i * x pow i) = &0) <=>
+         (!i. i IN 0..n ==> c i = &0)`,
+  REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THENL
+   [GEN_REWRITE_TAC I [TAUT `p <=> ~ ~p`] THEN DISCH_THEN(MP_TAC o MATCH_MP
+     REAL_POLYFUN_ROOTBOUND) THEN
+    ASM_REWRITE_TAC[real_INFINITE; GSYM INFINITE; DE_MORGAN_THM;
+                    SET_RULE `{x | T} = (:real)`];
+    ASM_SIMP_TAC[IN_NUMSEG; LE_0; REAL_MUL_LZERO; SUM_0]]);;
+
+let REAL_POLYFUN_EQ_CONST = prove
+ (`!n c k. (!x. sum(0..n) (\i. c i * x pow i) = k) <=>
+           c 0 = k /\ (!i. i IN 1..n ==> c i = &0)`,
+  REPEAT GEN_TAC THEN MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
+   `!x. sum(0..n) (\i. (if i = 0 then c 0 - k else c i) * x pow i) = &0` THEN
+  CONJ_TAC THENL
+   [SIMP_TAC[SUM_CLAUSES_LEFT; LE_0; real_pow; REAL_MUL_RID] THEN
+    REWRITE_TAC[REAL_ARITH `(c - k) + s = &0 <=> c + s = k`] THEN
+    AP_TERM_TAC THEN ABS_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+    AP_TERM_TAC THEN MATCH_MP_TAC SUM_EQ THEN GEN_TAC THEN
+    REWRITE_TAC[IN_NUMSEG] THEN
+    COND_CASES_TAC THEN ASM_REWRITE_TAC[ARITH];
+    REWRITE_TAC[REAL_POLYFUN_EQ_0; IN_NUMSEG; LE_0] THEN
+    GEN_REWRITE_TAC LAND_CONV [MESON[]
+     `(!n. P n) <=> P 0 /\ (!n. ~(n = 0) ==> P n)`] THEN
+    SIMP_TAC[LE_0; REAL_SUB_0] THEN MESON_TAC[LE_1]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Make natural numbers the default again.                                   *)

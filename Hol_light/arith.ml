@@ -7,7 +7,7 @@
 (*              (c) Copyright, John Harrison 1998-2007                       *)
 (* ========================================================================= *)
 
-needs "nums.ml";;
+needs "recursion.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Note: all the following proofs are intuitionistic and intensional, except *)
@@ -99,11 +99,13 @@ let EQ_ADD_RCANCEL_0 = prove
 (* Now define "bitwise" binary representation of numerals.                   *)
 (* ------------------------------------------------------------------------- *)
 
-let BIT0 = new_definition
- `BIT0 n = n + n`;;
+let BIT0 = prove
+ (`!n. BIT0 n = n + n`,
+  INDUCT_TAC THEN ASM_REWRITE_TAC[BIT0_DEF; ADD_CLAUSES]);;
 
-let BIT1 = new_definition
- `BIT1 n = SUC(n + n)`;;
+let BIT1 = prove
+ (`!n. BIT1 n = SUC(n + n)`,
+  REWRITE_TAC[BIT1_DEF; BIT0]);;
 
 let BIT0_THM = prove
  (`!n. NUMERAL (BIT0 n) = NUMERAL n + NUMERAL n`,
@@ -124,29 +126,6 @@ let ONE = prove
 let TWO = prove
  (`2 = SUC 1`,
   REWRITE_TAC[BIT0; BIT1; REWRITE_RULE[NUMERAL] ADD_CLAUSES; NUMERAL]);;
-
-(* ------------------------------------------------------------------------- *)
-(* Syntax operations on numerals.                                            *)
-(* ------------------------------------------------------------------------- *)
-
-let mk_numeral =
-  let Z = mk_const("_0",[])
-  and BIT0 = mk_const("BIT0",[])
-  and BIT1 = mk_const("BIT1",[])
-  and NUMERAL = mk_const("NUMERAL",[])
-  and zero = num_0 in
-  let rec mk_num n =
-    if n =/ num_0 then Z else
-    mk_comb((if mod_num n num_2 =/ num_0 then BIT0 else BIT1),
-            mk_num(quo_num n num_2)) in
-  fun n -> if n </ zero then failwith "mk_numeral: negative argument"
-           else mk_comb(NUMERAL,mk_num n);;
-
-let mk_small_numeral n = mk_numeral(Int n);;
-
-let dest_small_numeral t = Num.int_of_num(dest_numeral t);;
-
-let is_numeral = can dest_numeral;;
 
 (* ------------------------------------------------------------------------- *)
 (* One immediate consequence.                                                *)
@@ -297,6 +276,16 @@ let GE = new_definition
 
 let GT = new_definition
   `m > n <=> n < m`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Maximum and minimum of natural numbers.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let MAX = new_definition
+  `!m n. MAX m n = if m <= n then n else m`;;
+
+let MIN = new_definition
+  `!m n. MIN m n = if m <= n then m else n`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Step cases.                                                               *)
@@ -612,10 +601,6 @@ let LT_MULT_RCANCEL = prove
  (`!m n p. (m * p) < (n * p) <=> (m < n) /\ ~(p = 0)`,
   ONCE_REWRITE_TAC[MULT_SYM; CONJ_SYM] THEN
   MATCH_ACCEPT_TAC LT_MULT_LCANCEL);;
-
-let EQ_SUC = prove
- (`!m n. (SUC m = SUC n) <=> (m = n)`,
-  MESON_TAC[LE_SUC; LE_ANTISYM]);;
 
 let LT_MULT2 = prove
  (`!m n p q. m < n /\ p < q ==> m * p < n * q`,
@@ -1060,6 +1045,11 @@ let DIVISION = prove
  (`!m n. ~(n = 0) ==> (m = m DIV n * n + m MOD n) /\ m MOD n < n`,
   MESON_TAC[DIVISION_0]);;
 
+let DIVISION_SIMP = prove
+ (`(!m n. ~(n = 0) ==> m DIV n * n + m MOD n = m) /\
+   (!m n. ~(n = 0) ==> n * m DIV n + m MOD n = m)`,
+  MESON_TAC[DIVISION; MULT_SYM]);;
+
 let DIVMOD_UNIQ_LEMMA = prove
  (`!m n q1 r1 q2 r2. ((m = q1 * n + r1) /\ r1 < n) /\
                      ((m = q2 * n + r2) /\ r2 < n)
@@ -1300,6 +1290,13 @@ let MOD_MULT_ADD = prove
   MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `m + p DIV n` THEN
   ASM_SIMP_TAC[RIGHT_ADD_DISTRIB; GSYM ADD_ASSOC; EQ_ADD_LCANCEL; DIVISION]);;
 
+let DIV_MULT_ADD = prove
+ (`!a b n. ~(n = 0) ==> (a * n + b) DIV n = a + b DIV n`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC DIV_UNIQ THEN
+  EXISTS_TAC `b MOD n` THEN
+  REWRITE_TAC[RIGHT_ADD_DISTRIB; GSYM ADD_ASSOC] THEN
+  ASM_MESON_TAC[DIVISION]);;
+
 let MOD_ADD_MOD = prove
  (`!a b n. ~(n = 0) ==> ((a MOD n + b MOD n) MOD n = (a + b) MOD n)`,
   REPEAT STRIP_TAC THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC MOD_EQ THEN
@@ -1388,6 +1385,19 @@ let DIV_MOD = prove
     ASM_SIMP_TAC[LE_RDIV_EQ; MULT_EQ_0; DIV_DIV; LEFT_ADD_DISTRIB]] THEN
   REWRITE_TAC[MULT_AC] THEN MESON_TAC[ADD_SYM; MULT_SYM; LE_ADD_RCANCEL]);;
 
+let MOD_MOD_EXP_MIN = prove
+ (`!x p m n. ~(p = 0)
+             ==> x MOD (p EXP m) MOD (p EXP n) = x MOD (p EXP (MIN m n))`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[MIN] THEN
+  ASM_CASES_TAC `m:num <= n` THEN ASM_REWRITE_TAC[] THENL
+   [FIRST_X_ASSUM(CHOOSE_THEN SUBST1_TAC o GEN_REWRITE_RULE I [LE_EXISTS]) THEN
+    MATCH_MP_TAC MOD_LT THEN MATCH_MP_TAC LTE_TRANS THEN
+    EXISTS_TAC `p EXP m` THEN
+    ASM_SIMP_TAC[DIVISION; EXP_EQ_0; LE_EXP; LE_ADD];
+    SUBGOAL_THEN `?d. m = n + d` (CHOOSE_THEN SUBST1_TAC) THENL
+     [ASM_MESON_TAC[LE_CASES; LE_EXISTS];
+      ASM_SIMP_TAC[EXP_ADD; MOD_MOD; MULT_EQ_0; EXP_EQ_0]]]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Theorems for eliminating cutoff subtraction, predecessor, DIV and MOD.    *)
 (* We have versions that introduce universal or existential quantifiers.     *)
@@ -1463,16 +1473,6 @@ let NUM_CANCEL_CONV =
 let LE_IMP =
   let pth = PURE_ONCE_REWRITE_RULE[IMP_CONJ] LE_TRANS in
   fun th -> GEN_ALL(MATCH_MP pth (SPEC_ALL th));;
-
-(* ------------------------------------------------------------------------- *)
-(* Maximum and minimum of natural numbers.                                   *)
-(* ------------------------------------------------------------------------- *)
-
-let MAX = new_definition
-  `!m n. MAX m n = if m <= n then n else m`;;
-
-let MIN = new_definition
-  `!m n. MIN m n = if m <= n then m else n`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Binder for "the minimal n such that".                                     *)

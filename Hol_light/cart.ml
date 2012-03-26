@@ -35,10 +35,10 @@ let DIMINDEX_UNIQUE = prove
 (* ------------------------------------------------------------------------- *)
 
 let finite_image_tybij =
-  let th = prove
+  new_type_definition "finite_image" ("finite_index","dest_finite_image")
+  (prove
    (`?x. x IN 1..dimindex(:A)`,
-    EXISTS_TAC `1` THEN REWRITE_TAC[IN_NUMSEG; LE_REFL; DIMINDEX_GE_1]) in
-  new_type_definition "finite_image" ("finite_index","dest_finite_image") th;;
+    EXISTS_TAC `1` THEN REWRITE_TAC[IN_NUMSEG; LE_REFL; DIMINDEX_GE_1]));;
 
 let FINITE_IMAGE_IMAGE = prove
  (`UNIV:(A)finite_image->bool = IMAGE finite_index (1..dimindex(:A))`,
@@ -139,6 +139,11 @@ let LAMBDA_ETA = prove
 
 let FINITE_INDEX_INRANGE = prove
  (`!i. ?k. 1 <= k /\ k <= dimindex(:N) /\ !x:A^N. x$i = x$k`,
+  REWRITE_TAC[finite_index] THEN MESON_TAC[FINITE_INDEX_WORKS]);;
+
+let FINITE_INDEX_INRANGE_2 = prove
+ (`!i. ?k. 1 <= k /\ k <= dimindex(:N) /\
+           (!x:A^N. x$i = x$k) /\ (!y:B^N. y$i = y$k)`,
   REWRITE_TAC[finite_index] THEN MESON_TAC[FINITE_INDEX_WORKS]);;
 
 let CART_EQ_FULL = prove
@@ -317,3 +322,13 @@ let FINITE_CART = prove
 
 let vector = new_definition
   `(vector l):A^N = lambda i. EL (i - 1) l`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Convenient set membership elimination theorem.                            *)
+(* ------------------------------------------------------------------------- *)
+
+let IN_ELIM_PASTECART_THM = prove
+ (`!P a b. pastecart a b IN {pastecart x y | P x y} <=> P a b`,
+  REWRITE_TAC[IN_ELIM_THM; PASTECART_EQ;
+              FSTCART_PASTECART; SNDCART_PASTECART] THEN
+  MESON_TAC[]);;

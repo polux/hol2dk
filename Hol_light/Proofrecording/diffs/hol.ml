@@ -28,8 +28,7 @@ let temp_path = ref "/tmp";;
 (* and for Ocaml >= 3.10, use camlp5 instead.                                *)
 (* ------------------------------------------------------------------------- *)
 
-if let v = String.sub Sys.ocaml_version 0 4 in
-   v = "3.10" or v = "3.11"
+if let v = String.sub Sys.ocaml_version 0 4 in v >= "3.10"
 then (Topdirs.dir_directory "+camlp5";
       Topdirs.dir_load Format.std_formatter "camlp5o.cma")
 else (Topdirs.dir_load Format.std_formatter "camlp4o.cma");;
@@ -122,7 +121,7 @@ loads "drule.ml";;      (* Additional derived rules                          *)
 loads "tactics.ml";;    (* Tactics, tacticals and goal stack                 *)
 loads "itab.ml";;       (* Toy prover for intuitionistic logic               *)
 loads "simp.ml";;       (* Basic rewriting and simplification tools.         *)
-loads "theorems.ml";;   (* Additional theorems (mainly for quantifiers) etc. *)
+(* loads "theorems.ml";;   (\* Additional theorems (mainly for quantifiers) etc. *\) *)
 loads "tests.ml";;      (* Tests for hol2dk                                  *)
 (* loads "ind_defs.ml";;   (\* Derived rules for inductive definitions           *\) *)
 (* loads "class.ml";;      (\* Classical reasoning: Choice and Extensionality    *\) *)
@@ -130,7 +129,6 @@ loads "tests.ml";;      (* Tests for hol2dk                                  *)
 (* loads "canon.ml";;      (\* Tools for putting terms in canonical forms        *\) *)
 (* loads "meson.ml";;      (\* First order automation: MESON (model elimination) *\) *)
 (* loads "quot.ml";;       (\* Derived rules for defining quotient types         *\) *)
-(* loads "recursion.ml";;  (\* Tools for primitive recursion on inductive types  *\) *)
 
 (* (\* ------------------------------------------------------------------------- *\) *)
 (* (\* Mathematical theories and additional proof tools.                         *\) *)
@@ -138,6 +136,7 @@ loads "tests.ml";;      (* Tests for hol2dk                                  *)
 
 (* loads "pair.ml";;       (\* Theory of pairs                                   *\) *)
 (* loads "nums.ml";;       (\* Axiom of Infinity, definition of natural numbers  *\) *)
+(* loads "recursion.ml";;  (\* Tools for primitive recursion on inductive types  *\) *)
 (* loads "arith.ml";;      (\* Natural number arithmetic                         *\) *)
 (* loads "wf.ml";;         (\* Theory of wellfounded relations                   *\) *)
 (* loads "calc_num.ml";;   (\* Calculation with natural numbers                  *\) *)
@@ -152,7 +151,7 @@ loads "tests.ml";;      (* Tests for hol2dk                                  *)
 (* loads "calc_rat.ml";;   (\* Calculation with rational-valued reals            *\) *)
 (* loads "int.ml";;        (\* Definition of integers                            *\) *)
 (* loads "sets.ml";;       (\* Basic set theory.                                 *\) *)
-(* loads "iterate.ml";     (\* Iterated operations                               *\) *)
+(* loads "iterate.ml";;    (\* Iterated operations                               *\) *)
 (* loads "cart.ml";;       (\* Finite Cartesian products                         *\) *)
 (* loads "define.ml";;     (\* Support for general recursive definitions         *\) *)
 

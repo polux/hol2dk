@@ -34,7 +34,6 @@ echo '### Loading Examples/lagrange_lemma.ml'; echo 'loadt "Examples/lagrange_le
 echo '### Loading Examples/mangoldt.ml'; echo 'loadt "Examples/mangoldt.ml";;' | (time ./hol)
 echo '### Loading Examples/mccarthy.ml'; echo 'loadt "Examples/mccarthy.ml";;' | (time ./hol)
 echo '### Loading Examples/mizar.ml'; echo 'loadt "Examples/mizar.ml";;' | (time ./hol)
-echo '### Loading Examples/moebius.ml'; echo 'loadt "Examples/moebius.ml";;' | (time ./hol)
 echo '### Loading Library/multiplicative.ml'; echo 'loadt "Library/multiplicative.ml";;' | (time ./hol)
 echo '### Loading Examples/multiwf.ml'; echo 'loadt "Examples/multiwf.ml";;' | (time ./hol)
 echo '### Loading Examples/pell.ml'; echo 'loadt "Examples/pell.ml";;' | (time ./hol)
@@ -55,9 +54,9 @@ echo '### Loading Library/analysis.ml,/transc.ml,calc_real.ml,machin.ml,polylog.
  echo 'loadt "Examples/polylog.ml";;'; echo 'loadt "Library/poly.ml";;') | (time ./hol)
 echo '### Loading Library/prime.ml,pratt.ml';
 (echo 'loadt "Library/prime.ml";;'; echo 'loadt "Library/pratt.ml";;') | (time ./hol)
-echo '### Loading Library/prime.ml,pocklington.ml.ml';
+echo '### Loading Library/prime.ml,pocklington.ml';
 (echo 'loadt "Library/prime.ml";;'; echo 'loadt "Library/pocklington.ml";;') | (time ./hol)
-echo '### Loading Library/rstc.ml,reduct.ml.ml';
+echo '### Loading Library/rstc.ml,reduct.ml';
 (echo 'loadt "Library/rstc.ml";;'; echo 'loadt "Examples/reduct.ml";;') | (time ./hol)
 
 # Extended examples
@@ -65,6 +64,7 @@ echo '### Loading Library/rstc.ml,reduct.ml.ml';
 echo '### Loading Arithmetic/make.ml'; echo 'loadt "Arithmetic/make.ml";;' | (time ./hol)
 echo '### Loading Boyer_Moore/make.ml'; echo 'loadt "Boyer_Moore/make.ml";;' | (time ./hol)
 echo '### Loading Complex/make.ml'; echo 'loadt "Complex/make.ml";;' | (time ./hol)
+echo '### Loading IsabelleLight/make.ml'; echo 'loadt "IsabelleLight/make.ml";;' | (time ./hol)
 echo '### Loading Jordan/make.ml'; echo 'loadt "Jordan/make.ml";;' | (time ./hol)
 echo '### Loading Mizarlight/make.ml'; echo 'loadt "Mizarlight/make.ml";;' | (time ./hol)
 echo '### Loading Minisat/make.ml,Minisat/taut.ml';
@@ -89,18 +89,24 @@ echo '### Loading 100/bernoulli.ml'; echo 'loadt "100/bernoulli.ml";;' | (time .
 echo '### Loading 100/bertrand.ml,100/primerecip.ml';
 (echo 'loadt "100/bertrand.ml";;'; echo 'loadt "100/primerecip.ml";;') | (time ./hol)
 echo '### Loading 100/birthday.ml'; echo 'loadt "100/birthday.ml";;' | (time ./hol)
+echo '### Loading 100/cantor.ml'; echo 'loadt "100/cantor.ml";;' | (time ./hol)
 echo '### Loading 100/ceva.ml'; echo 'loadt "100/ceva.ml";;' | (time ./hol)
 echo '### Loading 100/circle.ml'; echo 'loadt "100/circle.ml";;' | (time ./hol)
 echo '### Loading 100/chords.ml'; echo 'loadt "100/chords.ml";;' | (time ./hol)
 echo '### Loading 100/combinations.ml'; echo 'loadt "100/combinations.ml";;' | (time ./hol)
 echo '### Loading 100/constructible.ml'; echo 'loadt "100/constructible.ml";;' | (time ./hol)
+echo '### Loading 100/cosine.ml'; echo 'loadt "100/cosine.ml";;' | (time ./hol)
 echo '### Loading 100/cubic.ml'; echo 'loadt "100/cubic.ml";;' | (time ./hol)
 echo '### Loading 100/derangements.ml'; echo 'loadt "100/derangements.ml";;' | (time ./hol)
 echo '### Loading 100/desargues.ml'; echo 'loadt "100/desargues.ml";;' | (time ./hol)
 echo '### Loading 100/dirichlet.ml'; echo 'loadt "100/dirichlet.ml";;' | (time ./hol)
 echo '### Loading 100/div3.ml'; echo 'loadt "100/div3.ml";;' | (time ./hol)
 echo '### Loading 100/divharmonic.ml'; echo 'loadt "100/divharmonic.ml";;' | (time ./hol)
+echo '### Loading 100/e_is_transcendental.ml'; echo 'loadt "100/e_is_transcendental.ml";;' | (time ./hol)
 echo '### Loading 100/euler.ml'; echo 'loadt "100/euler.ml";;' | (time ./hol)
+echo '### Loading 100/fourier.ml'; echo 'loadt "100/fourier.ml";;' | (time ./hol)
+echo '### Loading 100/four_squares.ml'; echo 'loadt "100/four_squares.ml";;' | (time ./hol)
+echo '### Loading 100/friendship.ml'; echo 'loadt "100/friendship.ml";;' | (time ./hol)
 echo '### Loading 100/fta.ml'; echo 'loadt "100/fta.ml";;' | (time ./hol)
 echo '### Loading 100/gcd.ml'; echo 'loadt "100/gcd.ml";;' | (time ./hol)
 echo '### Loading 100/heron.ml'; echo 'loadt "100/heron.ml";;' | (time ./hol)
@@ -114,6 +120,7 @@ echo '### Loading 100/liouville.ml'; echo 'loadt "100/liouville.ml";;' | (time .
 echo '### Loading 100/minkowski.ml'; echo 'loadt "100/minkowski.ml";;' | (time ./hol)
 echo '### Loading 100/pascal.ml'; echo 'loadt "100/pascal.ml";;' | (time ./hol)
 echo '### Loading 100/perfect.ml'; echo 'loadt "100/perfect.ml";;' | (time ./hol)
+echo '### Loading 100/pick.ml'; echo 'loadt "100/pick.ml";;' | (time ./hol)
 echo '### Loading 100/piseries.ml'; echo 'loadt "100/piseries.ml";;' | (time ./hol)
 echo '### Loading 100/pnt.ml'; echo 'loadt "100/pnt.ml";;' | (time ./hol)
 echo '### Loading 100/ptolemy.ml'; echo 'loadt "100/ptolemy.ml";;' | (time ./hol)
@@ -127,6 +134,8 @@ echo '### Loading 100/stirling.ml'; echo 'loadt "100/stirling.ml";;' | (time ./h
 echo '### Loading 100/subsequence.ml'; echo 'loadt "100/subsequence.ml";;' | (time ./hol)
 echo '### Loading 100/thales.ml'; echo 'loadt "100/thales.ml";;' | (time ./hol)
 echo '### Loading 100/triangular.ml'; echo 'loadt "100/triangular.ml";;' | (time ./hol)
+echo '### Loading 100/two_squares.ml'; echo 'loadt "100/two_squares.ml";;' | (time ./hol)
+echo '### Loading 100/wilson.ml'; echo 'loadt "100/wilson.ml";;' | (time ./hol)
 
 # Build the proof-recording version of HOL
 

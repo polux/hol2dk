@@ -10940,7 +10940,7 @@ let squ_induct = prove_by_refinement(
   TYPE_THEN `right  m` EXISTS_TAC;
   ASM_REWRITE_TAC[];
   REWRITE_TAC[right ];
-  ONCE_REWRITE_TAC[GSYM EQ_SUC];
+  ONCE_REWRITE_TAC[GSYM SUC_INJ];
   REWRITE_TAC[GSYM ADD];
   TYPE_THEN `(FST m +: &:1) -: FST n <=: &:0` SUBGOAL_TAC;
   UND 3;
@@ -10953,7 +10953,7 @@ let squ_induct = prove_by_refinement(
   TYPE_THEN `left    m` EXISTS_TAC;
   ASM_REWRITE_TAC[];
   REWRITE_TAC[left   ];
-  ONCE_REWRITE_TAC[GSYM EQ_SUC];
+  ONCE_REWRITE_TAC[GSYM SUC_INJ];
   REWRITE_TAC[GSYM ADD];
   TYPE_THEN `&:0 <=: (FST m -: &:1) -: FST n ` SUBGOAL_TAC;
   UND 3;
@@ -10976,7 +10976,7 @@ let squ_induct = prove_by_refinement(
   TYPE_THEN `up    m` EXISTS_TAC;
   ASM_REWRITE_TAC[];
   REWRITE_TAC[up  ];
-  ONCE_REWRITE_TAC[GSYM EQ_SUC];
+  ONCE_REWRITE_TAC[GSYM SUC_INJ];
   REWRITE_TAC[GSYM ADD_SUC];
   TYPE_THEN `(SND  m +: &:1) -: SND  n <=: &:0` SUBGOAL_TAC;
   UND 3;
@@ -10989,7 +10989,7 @@ let squ_induct = prove_by_refinement(
   TYPE_THEN `down    m` EXISTS_TAC;
   ASM_REWRITE_TAC[];
   REWRITE_TAC[down   ];
-  ONCE_REWRITE_TAC[GSYM EQ_SUC];
+  ONCE_REWRITE_TAC[GSYM SUC_INJ];
   REWRITE_TAC[GSYM ADD_SUC];
   TYPE_THEN `&:0 <=: (SND  m -: &:1) -: SND  n ` SUBGOAL_TAC;
   UND 3;
@@ -19505,8 +19505,16 @@ let graph_edge_end_select = prove_by_refinement(
 
 (* Thu Aug  5 21:17:36 EDT 2004 *)
 
-let inf = jordan_def `inf (X:real->bool) =
-   @s. ((!x. X x ==> s <= x) /\ (!y. (!x. X x ==> y <= x) ==> (y <= s)))`;;
+(* Tweaked slightly now that there is an "inf" constant. JRH, 4 Dec 2011 *)
+
+let inf =
+  let inf_def =
+    `inf (X:real->bool) =
+      @s. ((!x. X x ==> s <= x) /\ (!y. (!x. X x ==> y <= x) ==> (y <= s)))` in
+  let def =
+    subst [mk_var("inf",`:(real->bool)->real`),mk_const("inf",[])] inf_def in
+  jordan_def def;;
+
 let interval_closed = prove_by_refinement(
   `!a b. closed_ (top_of_metric(UNIV,d_real)) {x | a <= x /\ x <= b}`,
   (* {{{ proof *)
@@ -28012,7 +28020,7 @@ let infinite_interval = prove_by_refinement(
   UND 2;
   REDUCE_TAC;
   DISCH_TAC;
-  ONCE_REWRITE_TAC[GSYM EQ_SUC];
+  ONCE_REWRITE_TAC[GSYM SUC_INJ];
   IMATCH_MP_TAC  EXPinj;
   TYPE_THEN `2` EXISTS_TAC;
   ASM_REWRITE_TAC[];
@@ -35522,7 +35530,7 @@ let psegment_order_induct_lemma = prove_by_refinement(
   TYPE_THEN `SUC n` UNABBREV_TAC;
   IMATCH_MP_TAC  CARD_SUC_DELETE;
   FULL_REWRITE_TAC[psegment;segment];
-  FULL_REWRITE_TAC[EQ_SUC];
+  FULL_REWRITE_TAC[SUC_INJ];
   (* -B *)
   THM_INTRO_TAC [`E`;`b`;`e`] psegment_delete_end;
   REWRITE_TAC[];
@@ -47749,7 +47757,7 @@ let simple_arc_finite_lemma3 = prove_by_refinement(
   REWRITE_TAC[pointI];
   TYPE_THEN `(-- &:j, -- &: j')` EXISTS_TAC;
   REWRITE_TAC[int_neg;int_abstr;int_of_num_th;];
-  TYPE_THEN `!j. (is_int (-- &j))` SUBAGOAL_TAC;
+  TYPE_THEN `!j. (integer (-- &j))` SUBAGOAL_TAC;
   REWRITE_TAC[is_int];
   MESON_TAC[];
   USE 24 (REWRITE_RULE[int_rep]);

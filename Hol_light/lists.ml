@@ -49,6 +49,10 @@ let MAP = new_recursive_definition list_RECURSION
 let LAST = new_recursive_definition list_RECURSION
   `LAST (CONS (h:A) t) = if t = [] then h else LAST t`;;
 
+let BUTLAST = new_recursive_definition list_RECURSION
+ `(BUTLAST [] = []) /\
+  (BUTLAST (CONS h t) = if t = [] then [] else CONS h (BUTLAST t))`;;
+
 let REPLICATE = new_recursive_definition num_RECURSION
   `(REPLICATE 0 x = []) /\
    (REPLICATE (SUC n) x = CONS x (REPLICATE n x))`;;
@@ -352,6 +356,10 @@ let MEM_EXISTS_EL = prove
    [MESON[num_CASES] `(?i. P i) <=> P 0 \/ (?i. P(SUC i))`] THEN
   REWRITE_TAC[LT_SUC; LT_0; EL; HD; TL]);;
 
+let ALL_EL = prove
+ (`!P l. (!i. i < LENGTH l ==> P (EL i l)) <=> ALL P l`,
+  REWRITE_TAC[GSYM ALL_MEM; MEM_EXISTS_EL] THEN MESON_TAC[]);;
+
 let ALL2_MAP2 = prove
  (`!l m. ALL2 P (MAP f l) (MAP g m) = ALL2 (\x y. P (f x) (g y)) l m`,
   LIST_INDUCT_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[ALL2; MAP]);;
@@ -398,6 +406,74 @@ let SURJECTIVE_MAP = prove
     LIST_INDUCT_TAC THEN REWRITE_TAC[MAP; CONS_11; NOT_CONS_NIL; MAP_EQ_NIL];
     MATCH_MP_TAC list_INDUCT] THEN
   ASM_MESON_TAC[MAP]);;
+
+let MAP_ID = prove
+ (`!l. MAP (\x. x) l = l`,
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[MAP]);;
+
+let MAP_I = prove
+ (`MAP I = I`,
+  REWRITE_TAC[FUN_EQ_THM; I_DEF; MAP_ID]);;
+
+let APPEND_BUTLAST_LAST = prove
+ (`!l. ~(l = []) ==> APPEND (BUTLAST l) [LAST l] = l`,
+  LIST_INDUCT_TAC THEN REWRITE_TAC[LAST; BUTLAST; NOT_CONS_NIL] THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC[APPEND]);;
+
+let LAST_APPEND = prove
+ (`!p q. LAST(APPEND p q) = if q = [] then LAST p else LAST q`,
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[APPEND; LAST; APPEND_EQ_NIL] THEN
+  MESON_TAC[]);;
+
+let LENGTH_TL = prove
+ (`!l. ~(l = []) ==> LENGTH(TL l) = LENGTH l - 1`,
+  LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH; TL; ARITH; SUC_SUB1]);;
+
+let EL_APPEND = prove
+ (`!k l m. EL k (APPEND l m) = if k < LENGTH l then EL k l
+                               else EL (k - LENGTH l) m`,
+  INDUCT_TAC THEN REWRITE_TAC[EL] THEN
+  LIST_INDUCT_TAC THEN
+  REWRITE_TAC[HD; APPEND; LENGTH; SUB_0; EL; LT_0; CONJUNCT1 LT] THEN
+  ASM_REWRITE_TAC[TL; LT_SUC; SUB_SUC]);;
+
+let EL_TL = prove
+ (`!n. EL n (TL l) = EL (n + 1) l`,
+  REWRITE_TAC[GSYM ADD1; EL]);;
+
+let EL_CONS = prove
+ (`!n h t. EL n (CONS h t) = if n = 0 then h else EL (n - 1) t`,
+  INDUCT_TAC THEN REWRITE_TAC[EL; HD; TL; NOT_SUC; SUC_SUB1]);;
+
+let LAST_EL = prove
+ (`!l. ~(l = []) ==> LAST l = EL (LENGTH l - 1) l`,
+  LIST_INDUCT_TAC THEN REWRITE_TAC[LAST; LENGTH; SUC_SUB1] THEN
+  DISCH_TAC THEN COND_CASES_TAC THEN
+  ASM_SIMP_TAC[LENGTH; EL; HD; EL_CONS; LENGTH_EQ_NIL]);;
+
+let HD_APPEND = prove
+ (`!l m:A list. HD(APPEND l m) = if l = [] then HD m else HD l`,
+  LIST_INDUCT_TAC THEN REWRITE_TAC[HD; APPEND; NOT_CONS_NIL]);;
+
+let CONS_HD_TL = prove
+ (`!l. ~(l = []) ==> l = CONS (HD l) (TL l)`,
+  LIST_INDUCT_TAC THEN REWRITE_TAC[NOT_CONS_NIL;HD;TL]);;
+
+let EL_MAP = prove
+ (`!f n l. n < LENGTH l ==> EL n (MAP f l) = f(EL n l)`,
+  GEN_TAC THEN INDUCT_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[LENGTH; CONJUNCT1 LT; LT_0; EL; HD; TL; MAP; LT_SUC]);;
+
+let MAP_REVERSE = prove
+ (`!f l. REVERSE(MAP f l) = MAP f (REVERSE l)`,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[MAP; REVERSE; MAP_APPEND]);;
+
+let ALL_FILTER = prove
+ (`!P Q l:A list. ALL P (FILTER Q l) <=> ALL (\x. Q x ==> P x) l`,
+  GEN_TAC THEN GEN_TAC THEN
+  LIST_INDUCT_TAC THEN REWRITE_TAC[ALL; FILTER] THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[ALL]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Syntax.                                                                   *)

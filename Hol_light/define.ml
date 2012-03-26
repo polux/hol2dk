@@ -127,7 +127,7 @@ let ADMISSIBLE_COND = prove
   ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[]);;
 
 let ADMISSIBLE_MATCH = prove
- (`!(<<) p s e f c.
+ (`!(<<) p s e c.
         admissible(<<) p s e /\ admissible(<<) p s (\f x. c f x (e f x))
         ==> admissible(<<) p s (\f x:P. _MATCH (e f x) (c f x))`,
   REWRITE_TAC[admissible; _MATCH] THEN
@@ -931,8 +931,7 @@ let instantiate_casewise_recursion,
        (TRY_CONV SIMPLIFY_WELLDEFINEDNESS_CONV THENC
         TRY_CONV FORALL_UNWIND_CONV))) in
     let GUESS_ORDERING_TAC =
-      let false_tm = `\x:A y:A. F`
-      and and_tm = `(/\)` in
+      let false_tm = `\x:A y:A. F` in
       W(fun (asl,w) ->
             let ty = fst(dest_fun_ty(type_of(fst(dest_exists w)))) in
             EXISTS_TAC(inst [ty,aty] false_tm) THEN

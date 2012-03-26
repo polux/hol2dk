@@ -125,7 +125,7 @@ let PRODUCT_EQ_1 = prove
   SIMP_TAC[ITERATE_EQ_NEUTRAL; MONOIDAL_REAL_MUL]);;
 
 let PRODUCT_EQ_1_NUMSEG = prove
- (`!f s. (!i. m <= i /\ i <= n ==> (f(i) = &1)) ==> (product(m..n) f = &1)`,
+ (`!f m n. (!i. m <= i /\ i <= n ==> (f(i) = &1)) ==> (product(m..n) f = &1)`,
   SIMP_TAC[PRODUCT_EQ_1; IN_NUMSEG]);;
 
 let PRODUCT_MUL = prove
@@ -155,6 +155,15 @@ let PRODUCT_INV = prove
  (`!f s. FINITE s ==> product s (\x. inv(f x)) = inv(product s f)`,
   GEN_TAC THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
   SIMP_TAC[PRODUCT_CLAUSES; REAL_INV_1; REAL_INV_MUL]);;
+
+let PRODUCT_DIV = prove
+ (`!f g s. FINITE s ==> product s (\x. f x / g x) = product s f / product s g`,
+  SIMP_TAC[real_div; PRODUCT_MUL; PRODUCT_INV]);;
+
+let PRODUCT_DIV_NUMSEG = prove
+ (`!f g m n.
+         product(m..n) (\x. f x / g x) = product(m..n) f / product(m..n) g`,
+  SIMP_TAC[PRODUCT_DIV; FINITE_NUMSEG]);;
 
 let PRODUCT_ONE = prove
  (`!s. product s (\n. &1) = &1`,
